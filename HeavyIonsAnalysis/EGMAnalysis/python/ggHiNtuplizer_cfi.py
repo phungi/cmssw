@@ -3,7 +3,7 @@ import FWCore.ParameterSet.Config as cms
 ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     doGenParticles = cms.bool(False),
     doSuperClusters = cms.bool(False),
-    doElectrons = cms.bool(True),
+    doElectrons = cms.bool(False),
     doPhotons = cms.bool(True),
     doMuons = cms.bool(True),
 
@@ -17,8 +17,8 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     useValMapIso = cms.bool(True),
 
     doPhoERegression = cms.bool(True),
-    doRecHitsEB = cms.bool(True),
-    doRecHitsEE = cms.bool(True),
+    doRecHitsEB = cms.bool(False),
+    doRecHitsEE = cms.bool(False),
     recHitsEB = cms.untracked.InputTag("reducedEgamma","reducedEBRecHits"),
     recHitsEE = cms.untracked.InputTag("reducedEgamma","reducedEERecHits"),
 
