@@ -3,8 +3,8 @@ from CRABClient.UserUtilities import getUsername
 
 config = Configuration()
 
-inputList = 'HIExpressRawPrime_374345_files.txt'
-jobTag = "HIExpressRawPrime_374345"
+inputList = 'HIExpress_374354_files.txt'
+jobTag = "HIExpress_374354"
 username = getUsername()
 
 config.section_("General")
