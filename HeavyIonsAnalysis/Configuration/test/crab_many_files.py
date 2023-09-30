@@ -3,8 +3,8 @@ from CRABClient.UserUtilities import getUsername
 
 config = Configuration()
 
-inputList = '374354_files.txt'
-jobTag = "rho_test_374354"
+inputList = 'HIExpress_374289_files.txt'
+jobTag = "HIExpress_374289"
 username = getUsername()
 
 config.section_("General")
@@ -15,7 +15,7 @@ config.General.transferLogs = False
 
 config.section_("JobType")
 config.JobType.pluginName = 'Analysis'
-config.JobType.psetName = 'forest_miniAOD_run3_DATA.py'
+config.JobType.psetName = 'validation.py'
 config.JobType.maxMemoryMB = 2200
 config.JobType.maxJobRuntimeMin = 600
 config.JobType.allowUndistributedCMSSW = True
