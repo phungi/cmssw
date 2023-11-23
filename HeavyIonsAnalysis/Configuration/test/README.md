@@ -2,6 +2,8 @@
 
 The files included in this repository were used to generate the plots shown during the Run3 (2023) data-taking period. The RhoAnalyser was used to extract the values of rho. The forests were created using the script validation.py, which was being called by the crab_many_files.py submission script. The files were then processed by the script Rho_new_file.cpp, and the macro validation_multifiles.cpp was used for plotting.
 
+RhoAnalyser is located on the same level as HeavyIonsAnalysis (cmssw/RhoAnalyser). It contains two scripts, one which retrieves the rho values in bands of eta, and the other which creates a random cone in each event and saves the raw value of the sum of pfCandidates, as well as the difference between the sum and the rho*area of the cone.
+
 Rho_new_file.cpp accepts two arguments, an input and an output file. I used that script for the validation, but it contains some unneeded sections - I tried to reduce the script - the Reduced_rho.cpp, which on first glance gives same results (at least for run XXX22). 
 
 NB: HLT_HIMinimumBiasHF1AND_v1 is replaced by v2 for Run ...45 onwards.
