@@ -16,4 +16,5 @@
 <use name="CondFormats/JetMETObjects"/>
 <use name="SimDataFormats/GeneratorProducts"/>
 <use name="CalibFormats/HcalObjects"/>
+<!-- <use name="HeavyIonsAnalysis/JetAnalysis/RhoAnalyser/RhoAnalysis"/> -->
 <flags EDM_PLUGIN="1"/>

@@ -4,7 +4,6 @@ from HeavyIonsAnalysis.JetAnalysis.inclusiveJetAnalyzer_cff import *
 
 akCs4PFJetAnalyzer = inclusiveJetAnalyzer.clone(
     jetTag = cms.InputTag("slimmedJets"),
-    genjetTag = 'slimmedGenJets',
     rParam = 0.4,
     fillGenJets = True,
     isMC = True,

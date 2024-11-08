@@ -20,8 +20,9 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
-#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "fastjet/contrib/Njettiness.hh"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+
 //
 
 /**\class HiInclusiveJetAnalyzer

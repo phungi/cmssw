@@ -7,6 +7,14 @@ hltobject = cms.EDAnalyzer("TriggerObjectAnalyzer",
    #triggerEvent = cms.InputTag("hltTriggerSummaryAOD","","HLT")
    triggerObjects = cms.InputTag("slimmedPatTrigger","","PAT")
 )
+trigger_list_custom = cms.vstring(
+   'HLT_HIAK4CaloJet100_v',
+   'HLT_HIAK4CaloJet80_v',
+   )
+trigger_list_custom_PbPb = cms.vstring(
+   'HLT_HIPuAK4CaloJet100Eta5p1_v',
+   'HLT_HIPuAK4CaloJet80Eta5p1_v',
+   )
 
 trigger_list_data = cms.vstring(
    'HLT_HIL1DoubleMuOpen_v',

@@ -6,10 +6,10 @@ l1object = cms.EDAnalyzer("L1UpgradeFlatTreeProducer",
     jetToken = cms.untracked.InputTag("caloStage2Digis","Jet"),
     muonToken = cms.untracked.InputTag("gmtStage2Digis","Muon"),
     sumToken = cms.untracked.InputTag("caloStage2Digis","EtSum"),
-    doEg = cms.bool(True),
-    doTau = cms.bool(True),
+    doEg = cms.bool(False),
+    doTau = cms.bool(False),
     doJet = cms.bool(True),
-    doMuon = cms.bool(True),
+    doMuon = cms.bool(False),
     doSum = cms.bool(True),
     maxL1Upgrade = cms.uint32(60)
 )

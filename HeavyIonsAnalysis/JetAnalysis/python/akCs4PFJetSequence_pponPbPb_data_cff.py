@@ -11,4 +11,13 @@ akCs4PFJetAnalyzer = inclusiveJetAnalyzer.clone(
     hltTrgResults = cms.untracked.string('TriggerResults::'+'HISIGNAL'),
     )
 
+akCs2PFJetAnalyzer = inclusiveJetAnalyzer.clone(
+    jetTag = cms.InputTag("slimmedJets"),
+    rParam = 0.2,
+    fillGenJets = False,
+    isMC = False,
+    jetName = cms.untracked.string("akCs2PF"),
+    hltTrgResults = cms.untracked.string('TriggerResults::'+'HISIGNAL'),
+    )
+
 akFlowPuCs4PFJetAnalyzer = akCs4PFJetAnalyzer.clone()

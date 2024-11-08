@@ -113,8 +113,8 @@ process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 #process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
 #process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 #process.muonAnalyzer.doGen = cms.bool(True)
-process.load("RhoAnalyser.RhoAnalysis.RhoAnalysis_cff")
-process.load("RhoAnalyser.RhoAnalysis.RandomConeAnalysis_cff")
+process.load("HeavyIonsAnalysis.JetAnalysis.RhoAnalysis_cff")
+process.load("HeavyIonsAnalysis.JetAnalysis.RandomConeAnalysis_cff")
 process.load("RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi")
 
 ###############################################################################

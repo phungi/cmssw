@@ -6,7 +6,6 @@ ak4PFJetAnalyzer = inclusiveJetAnalyzer.clone(
     jetTag = cms.InputTag("slimmedJets"),
     genjetTag = 'slimmedGenJets',
     rParam = 0.4,
-#    trackTag = cms.InputTag("generalTracks"),
     fillGenJets = True,
     isMC = True,
     doSubEvent = True,

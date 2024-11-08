@@ -12,4 +12,5 @@ hiFJRhoFlowModulation.jetTag = "ak4PFJetsForFlow"  # Jet collection used for jet
 extraJetsData = cms.Sequence(PackedPFTowers + hiPuRho)
 extraFlowJetsData = cms.Sequence(PackedPFTowers + hiPuRho + ak4PFJetsForFlow + hiFJRhoFlowModulation)
 extraJetsMC = cms.Sequence(PackedPFTowers + hiPuRho + hiSignalGenParticles + allPartons)
+extraPpJetsMC = cms.Sequence(hiSignalGenParticles + allPartons)
 extraFlowJetsMC = cms.Sequence(PackedPFTowers + hiPuRho + hiSignalGenParticles + allPartons + ak4PFJetsForFlow + hiFJRhoFlowModulation)
