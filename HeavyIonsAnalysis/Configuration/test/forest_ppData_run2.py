@@ -19,7 +19,8 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 125X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        "/store/hidata/HIRun2018A/HISingleMuon/MINIAOD/PbPb18_MiniAODv1-v1/00000/00345f79-641f-4002-baf1-19ae8e83c48b.root"
+        # '/HighEGJet/Run2017G-UL2017_MiniAODv2-v1/MINIAOD'
+        '/store/data/Run2017G/HighEGJet/MINIAOD/UL2017_MiniAODv2-v1/00000/0555A405-79C7-0744-A78E-61B94060F6C7.root'
     ),
 )
 
@@ -105,7 +106,7 @@ process.ggHiNtuplizer.electronSrc = "correctedElectrons"
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
-process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff')
+process.load('HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_pponPbPb_data_cff')
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
@@ -127,7 +128,7 @@ process.zdcanalyzer.calZDCDigi = True
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo +
-    process.hiEvtAnalyzer +
+    # process.hiEvtAnalyzer +
     process.hltanalysis
     #process.hltobject +
     #process.l1object +
@@ -144,6 +145,7 @@ process.forest = cms.Path(
 
 #customisation
 
+addR2Jets = True
 addR3Jets = False
 addR3FlowJets = False
 addR4Jets = True
@@ -153,10 +155,17 @@ addR4FlowJets = False #True
 addCandidateTagging = False
 
 
-if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
+if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets or addR2Jets:
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
+
+    if addR2Jets :
+        process.jetsR2 = cms.Sequence()
+        setupHeavyIonJets('ak2PF', process.jetsR2, process, isMC = 0, radius = 0.20, JECTag = 'AK2PF', doFlow = False)
+        process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
+        process.ak2PFJetAnalyzer = process.ak4PFJetAnalyzer.clone(jetTag = "ak2PFpatJets", jetName = 'ak2PF')
+        process.forest += process.extraJetsData * process.jetsR2 * process.ak2PFJetAnalyzer
 
     if addR3Jets :
         process.jetsR3 = cms.Sequence()
@@ -175,11 +184,11 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
     if addR4Jets :
         # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
         process.jetsR4 = cms.Sequence()
-        setupHeavyIonJets('akCs0PF', process.jetsR4, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF', doFlow = False)
-        process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.akCs4PFJetAnalyzer.jetTag = 'akCs0PFpatJets'
-        process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
-        process.forest += process.extraJetsData * process.jetsR4 * process.akCs4PFJetAnalyzer
+        setupHeavyIonJets('ak0PF', process.jetsR4, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF', doFlow = False)
+        process.ak0PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
+        process.ak4PFJetAnalyzer.jetTag = 'ak0PFpatJets'
+        process.ak4PFJetAnalyzer.jetName = 'ak0PF'
+        process.forest += process.extraJetsData * process.jetsR4 * process.ak4PFJetAnalyzer
  
     if addR4FlowJets :
         process.jetsR4flow = cms.Sequence()

@@ -19,13 +19,17 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 125X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        "/store/hidata/HIRun2018A/HISingleMuon/MINIAOD/PbPb18_MiniAODv1-v1/00000/00345f79-641f-4002-baf1-19ae8e83c48b.root"
+        # "/HIHardProbes/HIRun2018A-PbPb18_MiniAODv1-v1/MINIAOD"
+        # "/store/hidata/HIRun2018A/HIMinimumBias1/MINIAOD/PbPb18_MiniAODv1-v1/00000/02cfa535-3623-4c48-8e0c-b8786ed0f737.root"
+        # "/HIMinimumBias1/HIRun2018A-PbPb18_MiniAODv1-v1/MINIAOD"
+        # "/HITestRaw0/HIRun2022A-PromptReco-v1/AOD"
+        "/store/hidata/HIRun2018A/HIHardProbes/MINIAOD/PbPb18_MiniAODv1-v1/00000/034807c1-0ae5-4540-bb81-80ab2f3bc01d.root"
     ),
 )
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10000)
+    input = cms.untracked.int32(1000)
     )
 
 ###############################################################################
@@ -37,9 +41,8 @@ process.load('Configuration.StandardSequences.MagneticField_38T_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 
-
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data_promptlike_hi', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '112X_dataRun2_PromptLike_HI_v6', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 # This is the default centrality tag built-in in the miniAOD forest.
@@ -65,7 +68,7 @@ process.GlobalTag.toGet.extend([
 
 # root output
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("HiForestMiniAOD.root"))
+    fileName = cms.string("PbPb_data.root"))
 
 # # edm output for debugging purposes
 # process.output = cms.OutputModule(
@@ -75,7 +78,6 @@ process.TFileService = cms.Service("TFileService",
 #         'keep *',
 #         )
 #     )
-
 # process.output_path = cms.EndPath(process.output)
 
 ###############################################################################
@@ -99,13 +101,21 @@ process.correctedElectrons.correctionFile = SSHIRun2018A
 
 #process.load('HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi')
 #process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
-process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
-process.ggHiNtuplizer.doMuons = cms.bool(False)
-process.ggHiNtuplizer.electronSrc = "correctedElectrons"
+# process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+# process.ggHiNtuplizer.doMuons = cms.bool(False)
+# process.ggHiNtuplizer.doElectrons = cms.bool(False)
+# process.ggHiNtuplizer.doPhotons = cms.bool(False)
+# process.ggHiNtuplizer.electronSrc = "correctedElectrons"
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
 process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff')
+# from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_DATA_PbPb5020_2018  
+# process = overrideJEC_DATA_PbPb5020_2018(process)
+
+
+# from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_DATA_pp5020_2017  
+# process = overrideJEC_DATA_pp5020_2017(process)
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
@@ -121,20 +131,25 @@ process.zdcanalyzer.doZDCDigi = False
 process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
 process.zdcanalyzer.calZDCDigi = True
 ################################
-
-
+#Rho information
+# process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
+process.load("RhoAnalyser.RhoAnalysis.RhoAnalysis_cff")
+process.load("RhoAnalyser.RhoAnalysis.RandomConeAnalysis_cff")
+process.load("RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi")
 ###############################################################################
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo +
     process.hiEvtAnalyzer +
     process.hltanalysis
-    #process.hltobject +
-    #process.l1object +
+    # process.hiPuRhoAnalyzer
+    # process.hiFJRhoAnalyzer
+    # process.hltobject +
+    # process.l1object +
     # process.trackSequencePbPb +
     # process.particleFlowAnalyser +
     # process.correctedElectrons +
-    # process.ggHiNtuplizer +
+    # process.ggHiNtuplizer 
     # process.zdcdigi +
     # process.QWzdcreco +
     # process.zdcanalyzer #+
@@ -144,16 +159,17 @@ process.forest = cms.Path(
 
 #customisation
 
-addR3Jets = False
+addR3Jets = False #True
 addR3FlowJets = False
 addR4Jets = True
 addR4FlowJets = False #True
+addR2Jets = False #True 
+addR2JetsRetry = False #True
 
 # this is only for non-reclustered jets
 addCandidateTagging = False
 
-
-if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
+if addR2Jets or addR2JetsRetry or addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
@@ -162,8 +178,15 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.jetsR3 = cms.Sequence()
         setupHeavyIonJets('akCs3PF', process.jetsR3, process, isMC = 0, radius = 0.30, JECTag = 'AK3PF', doFlow = False)
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFpatJets", jetName = 'akCs3PF')
+        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(rParam = 0.3, jetTag = "akCs3PFpatJets", jetName = 'akCs3PF')
         process.forest += process.extraJetsData * process.jetsR3 * process.akCs3PFJetAnalyzer
+
+    if addR2JetsRetry :
+        process.jetsR2 = cms.Sequence()
+        setupHeavyIonJets('akCs2PF', process.jetsR3, process, isMC = 0, radius = 0.20, JECTag = 'AK2PF', doFlow = False)
+        process.akCs2PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
+        process.akCs2PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs2PFpatJets", jetName = 'akCs2PF')
+        process.forest += process.extraJetsData * process.jetsR2 * process.akCs2PFJetAnalyzer
 
     if addR3FlowJets :
         process.jetsR3flow = cms.Sequence()
@@ -180,6 +203,13 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akCs4PFJetAnalyzer.jetTag = 'akCs0PFpatJets'
         process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
         process.forest += process.extraJetsData * process.jetsR4 * process.akCs4PFJetAnalyzer
+
+    if addR2Jets :
+        process.jetsR2 = cms.Sequence()
+        setupHeavyIonJets('akCs2PF', process.jetsR2, process, isMC = 0, radius = 0.20, JECTag = 'AK2PF', doFlow = False)
+        process.akCs2PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
+        process.akCs2PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(rParam = 0.2, jetTag = "akCs2PFpatJets", jetName = 'akCs2PF')
+        process.forest += process.extraJetsData * process.jetsR2 * process.akCs2PFJetAnalyzer
  
     if addR4FlowJets :
         process.jetsR4flow = cms.Sequence()
@@ -189,30 +219,31 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akFlowPuCs4PFJetAnalyzer.jetName = 'akCs4PFFlow'
         process.forest += process.extraFlowJetsData * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
 
+process.forest += process.hiFJRhoFlowModulationProducer * process.rhoAnalysis * process.randomConeAnalysisR4 * process.randomConeAnalysisR2
 
-if addCandidateTagging:
-    process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
+# if addCandidateTagging:
+#     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
 
-    from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
-    updateJetCollection(
-        process,
-        jetSource = cms.InputTag('slimmedJets'),
-        jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
-        btagDiscriminators = ['pfCombinedSecondaryVertexV2BJetTags', 'pfDeepCSVDiscriminatorsJetTags:BvsAll', 'pfDeepCSVDiscriminatorsJetTags:CvsB', 'pfDeepCSVDiscriminatorsJetTags:CvsL'], ## to add discriminators,
-        btagPrefix = 'TEST',
-    )
+#     from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
+#     updateJetCollection(
+#         process,
+#         jetSource = cms.InputTag('slimmedJets'),
+#         jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
+#         btagDiscriminators = ['pfCombinedSecondaryVertexV2BJetTags', 'pfDeepCSVDiscriminatorsJetTags:BvsAll', 'pfDeepCSVDiscriminatorsJetTags:CvsB', 'pfDeepCSVDiscriminatorsJetTags:CvsL'], ## to add discriminators,
+#         btagPrefix = 'TEST',
+#     )
 
-    process.updatedPatJets.addJetCorrFactors = False
-    process.updatedPatJets.discriminatorSources = cms.VInputTag(
-        cms.InputTag('pfDeepCSVJetTags:probb'),
-        cms.InputTag('pfDeepCSVJetTags:probc'),
-        cms.InputTag('pfDeepCSVJetTags:probudsg'),
-        cms.InputTag('pfDeepCSVJetTags:probbb'),
-    )
+#     process.updatedPatJets.addJetCorrFactors = False
+#     process.updatedPatJets.discriminatorSources = cms.VInputTag(
+#         cms.InputTag('pfDeepCSVJetTags:probb'),
+#         cms.InputTag('pfDeepCSVJetTags:probc'),
+#         cms.InputTag('pfDeepCSVJetTags:probudsg'),
+#         cms.InputTag('pfDeepCSVJetTags:probbb'),
+#     )
 
-    process.akCs4PFJetAnalyzer.jetTag = "updatedPatJets"
+#     process.akCs4PFJetAnalyzer.jetTag = "updatedPatJets"
 
-    process.forest.insert(1,process.candidateBtagging*process.updatedPatJets)
+#     process.forest.insert(1,process.candidateBtagging*process.updatedPatJets)
 
 
 #########################

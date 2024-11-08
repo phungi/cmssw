@@ -3,8 +3,9 @@
 # Type: mc
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_pp_on_PbPb_cff import Run3_pp_on_PbPb
-process = cms.Process('HiForest', Run3_pp_on_PbPb)
+from Configuration.Eras.Era_Run2_2018_pp_on_AA_cff import Run2_2018_pp_on_AA
+from Configuration.ProcessModifiers.run2_miniAOD_pp_on_AA_103X_cff import run2_miniAOD_pp_on_AA_103X
+process = cms.Process('HiForest', Run2_2018_pp_on_AA,run2_miniAOD_pp_on_AA_103X)
 
 ###############################################################################
 
@@ -18,13 +19,13 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 125X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/user/mnguyen//Run3MC/QCD_pThat15_Run3_HydjetEmbedded/QCD_pthat15_Run3_HydjetEmbedded_mAOD_restrictTracking/220714_111445/0000/mAOD_RAW2DIGI_L1Reco_RECO_PAT_99.root'
+        '/store/himc/HINPbPbSpring21MiniAOD/DiJet_pThat-15_TuneCP5_HydjetDrumMB_5p02TeV_Pythia8/MINIAODSIM/FixL1CaloGT_New_Release_112X_upgrade2018_realistic_HI_v9-v1/2520000/00147e49-765a-424c-a7e0-29860f11847d.root'
     ),
 )
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(10000)
     )
 
 ###############################################################################
@@ -38,7 +39,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2022_realistic_hi', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2018_realistic_hi', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
@@ -53,7 +54,7 @@ process.GlobalTag.toGet.extend([
 
 # root output
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("HiForestMiniAOD.root"))
+    fileName = cms.string("out_home_resub_experimental_mAOD_r2_MC_234.root"))
 
 # # edm output for debugging purposes
 # process.output = cms.OutputModule(
@@ -72,6 +73,9 @@ process.TFileService = cms.Service("TFileService",
 # Gen Analyzer
 #############################
 process.load('HeavyIonsAnalysis.EventAnalysis.HiGenAnalyzer_cfi')
+# making cuts looser so that we can actually check dNdEta
+process.HiGenParticleAna.ptMin = cms.untracked.double(0.4) # default is 5
+process.HiGenParticleAna.etaMax = cms.untracked.double(5.) # default is 2.5
 
 # event analysis
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
@@ -103,9 +107,9 @@ process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_mc_cff')
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 #muons
-process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
-process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
-process.muonAnalyzer.doGen = cms.bool(True)
+#process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+#process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
+#process.muonAnalyzer.doGen = cms.bool(True)
 
 ###############################################################################
 
@@ -116,38 +120,46 @@ process.muonAnalyzer.doGen = cms.bool(True)
 process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis +
-    process.hltobject +
-    process.l1object +
+    #process.hltobject +
+    #process.l1object +
     process.trackSequencePbPb +
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
-    process.HiGenParticleAna +
-    process.correctedElectrons +
-    process.ggHiNtuplizer +
-    process.unpackedMuons +
-    process.muonAnalyzer
+    process.HiGenParticleAna #+
+    # process.correctedElectrons +
+    # process.ggHiNtuplizer #+
+    #process.unpackedMuons +
+    #process.muonAnalyzer
     )
 
 #customisation
-
-addR3Jets = False
+addR2Jets = True
+addR3Jets = True
 addR3FlowJets = False
 addR4Jets = True
 addR4FlowJets = True
-matchJets = True             # Enables q/g and heavy flavor jet identification in MC
+matchJets = True             # Enables q/g and heavy flavor jet identification
 addCandidateTagging = False
 
-if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
+if addR2Jets or addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
+
+    if addR2Jets :
+        process.jetsR2 = cms.Sequence()
+        jetName = 'akCs2PF'
+        setupHeavyIonJets(jetName, process.jetsR2, process, isMC = 1, radius = 0.20, JECTag = 'AK2PF', doFlow = False, matchJets = matchJets)
+        process.akCs2PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
+        process.akCs2PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = jetName + "patJets", jetName = jetName, genjetTag = "ak2GenJetsNoNu", matchJets = matchJets, matchTag = "ak2PFMatchingFor" + jetName + "patJets")      
+        process.forest += process.extraJetsMC * process.jetsR2 * process.akCs2PFJetAnalyzer
 
     if addR3Jets :
         process.jetsR3 = cms.Sequence()
         jetName = 'akCs3PF'
         setupHeavyIonJets(jetName, process.jetsR3, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF', doFlow = False, matchJets = matchJets)
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = jetName + "patJets", jetName = jetName, genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingFor" + jetName + "patJets")
+        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = jetName + "patJets", jetName = jetName, genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingFor" + jetName + "patJets")      
         process.forest += process.extraJetsMC * process.jetsR3 * process.akCs3PFJetAnalyzer
 
     if addR3FlowJets :
@@ -179,7 +191,7 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akFlowPuCs4PFJetAnalyzer.jetName = jetName
         process.akFlowPuCs4PFJetAnalyzer.matchJets = matchJets
         process.akFlowPuCs4PFJetAnalyzer.matchTag = 'ak4PFMatchingFor' + jetName + 'patJets'
-        process.forest += process.extraFlowJetsMC * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer 
+        process.forest += process.extraFlowJetsMC * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
 
 
 if addCandidateTagging:
