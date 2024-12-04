@@ -141,7 +141,7 @@ aggregatedPFCollection::aggregatedPFCollection(const edm::ParameterSet& iConfig)
 }
 
 void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
-  //    std::cout << "In aggregatedPFCollection" << std::endl;
+    std::cout << "In aggregatedPFCollection::produce" << std::endl;
 
     auto newPFCandCollection = std::make_unique<reco::PFCandidateCollection>();
 
@@ -170,7 +170,7 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
      
             if (doGenJets_ && isMC_) {
 
-	      // std::cout << "------->Aggregating HF for gen jet" << std::endl;               
+	        std::cout << "------->Aggregating HF for gen jet" << std::endl;               
                 reco::PFCandidate outputPseudoHF;
                 std::vector<reco::PFCandidate> constituentsNoHF;
 
@@ -262,7 +262,7 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                 
             else {
 
-	      //std::cout << "------->Aggregating HF for reco jet" << std::endl; 
+	      std::cout << "------->Aggregating HF for reco jet" << std::endl; 
 
                 reco::TrackToGenParticleMap recoMap = isMC_ ? *candToGenParticleMap : reco::TrackToGenParticleMap();	        
 
@@ -277,14 +277,19 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                 reco::Candidate::PolarLorentzVector totalPseudoHF(0., 0., 0., 0.);
 
                 // Grab the IP and SV tag info from the jet
-                const reco::CandIPTagInfo *ipTagInfo = jet.tagInfoCandIP(ipTagInfoLabel_.c_str());
+		std::cout << "Grab tag infos" << std::endl;
+		std::cout << "HAS IPtag " << ipTagInfoLabel_.c_str() << " " << jet.hasTagInfo(ipTagInfoLabel_.c_str()) << std::endl;
+		std::cout << "HAS svtag " << svTagInfoLabel_.c_str() << " " << jet.hasTagInfo(svTagInfoLabel_.c_str()) << std::endl;
+		const reco::CandIPTagInfo *ipTagInfo = jet.tagInfoCandIP(ipTagInfoLabel_.c_str());
                 const std::vector<reco::btag::TrackIPData> ipData = ipTagInfo->impactParameterData();
                 const std::vector<edm::Ptr<reco::Candidate>> ipTracks = ipTagInfo->selectedTracks();
-
+		
                 const reco::CandSecondaryVertexTagInfo *svTagInfo = jet.tagInfoCandSecondaryVertex(svTagInfoLabel_.c_str());
 
+		std::cout << "Going to constit loop" << std::endl;
                 for (const edm::Ptr<reco::Candidate> &constit : jet.getJetConstituents()) {
-                    if (chargedOnly_ && constit->charge() == 0) continue;
+		  std::cout << "constit loop" << std::endl;
+		    if (chargedOnly_ && constit->charge() == 0) continue;
                     if (constit->pt() < ptCut_) continue;
 
                     // Look for particle in ipTracks
@@ -320,13 +325,14 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                         continue;
                     }
 
-                    int status = 10; //TESTING, to be set to 1
+                    int status = 1;
 
                     if (isMC_ && withTruthInfo_) {
+		      std::cout << "TEST: withtruthinfo" << std::endl;
                         if (recoMap.find(constit) != recoMap.end()) {
                             edm::Ptr<pat::PackedGenParticle> matchGenParticle = recoMap.at(constit);
                             status = matchGenParticle->status();
-			    // std::cout << " matchgenptcl status = " << status << " pdgid " << matchGenParticle->pdgId() << std::endl;
+			    std::cout << " matchgenptcl status = " << status << " pdgid " << matchGenParticle->pdgId() << std::endl;
                         }
                     }
                     else {
@@ -543,8 +549,8 @@ void aggregatedPFCollection::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<std::vector<std::string>>("tmva_variables", {});
   desc.add<std::vector<std::string>>("tmva_spectators", {});
   // Tag info labels
-  desc.add<std::string>("ipTagInfoLabel", "pfImpactParameter");
-  desc.add<std::string>("svTagInfoLabel", "pfInclusiveSecondaryVertexFinder");
+  desc.add<std::string>("ipTagInfoLabel", "pfImpactParameterTagInfos");
+  desc.add<std::string>("svTagInfoLabel", "pfInclusiveSecondaryVertexFinderTagInfos");
 
   descriptions.add("aggregatedPFCands", desc);
 }

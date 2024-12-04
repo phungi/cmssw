@@ -1,3 +1,4 @@
+
 import FWCore.ParameterSet.Config as cms
 
 def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = False, labelR = "0"):
@@ -124,8 +125,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         if labelR == "0": matchedGenJets = "slimmedGenJets"
         else: matchedGenJets  = "ak"+labelR+"GenJetsWithNu"
 
-
-
+        
     from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
     addJetCollection(
         process,
@@ -144,12 +144,42 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
         #jetCorrections     = ('AK4PF' if labelR=='0' else 'AK'+labelR+'PF',) + jetCorrectionsAK4[1:],
         jetCorrections     = ('AK4PF',) + jetCorrectionsAK4[1:],  #tempoorary while we wait for updated JECs
+
     )
 
     getattr(process,"patJetsAK"+labelR+"PFUnsubJets").useLegacyJetMCFlavour = False
 
     process.patAlgosToolsTask.add(getattr(process,"ak"+labelR+"PFUnsubJets"))
 
+
+    #### Aggregation 
+    process.load("RecoHI.HiJetAlgos.TrackToGenParticleMapProducer_cfi")
+
+    process.TrackToGenParticleMapProducer.jetSrc = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets")
+    process.TrackToGenParticleMapProducer.genParticleSrc = cms.InputTag("HFdecayProductTagger")
+    process.patAlgosToolsTask.add(getattr(process,"TrackToGenParticleMapProducer"))
+
+    process.load("RecoHI.HiJetAlgos.aggregatedPFCollection_cfi")
+    process.aggregatedPFCands.aggregateHF = True
+    process.aggregatedPFCands.jetSrc =  "patJetsAK"+labelR+"PFUnsubJets"
+    process.aggregatedPFCands.constitSrc = "packedPFCandidates"
+    process.aggregatedPFCands.doGenJets = False
+    process.aggregatedPFCands.aggregateWithTruthInfo = True
+    process.aggregatedPFCands.candToGenParticleMap = ["TrackToGenParticleMapProducer", "trackToGenParticleMap"]
+
+    process.aggregatedGenLevel  = process.aggregatedPFCands.clone(
+        chargedOnly = cms.bool(True),
+        aggregateHF = cms.bool(True),
+        jetSrc = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets"),
+        constitSrc = cms.InputTag("packedGenParticles"),
+        doGenJets = cms.bool(True),
+        candToGenParticleMap = cms.InputTag("TrackToGenParticleMapProducer", "genConstitToGenParticleMap"),
+    )
+
+    process.patAlgosToolsTask.add(getattr(process,"aggregatedPFCands"))
+    process.patAlgosToolsTask.add(getattr(process,"aggregatedGenLevel"))
+
+    
     # Create HIN subtracted reco jets
     from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
     addJetCollection(
@@ -160,13 +190,15 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         algo               = "ak", #name of algo must be in this format
         rParam             = jetR,
         pvSource           = cms.InputTag("offlineSlimmedPrimaryVertices"),
-        pfCandidates       = cms.InputTag("packedPFCandidates"),
+#        pfCandidates       = cms.InputTag("packedPFCandidates"),
+        pfCandidates       = cms.InputTag("aggregatedPFCands"),
         svSource           = svSource,
         muSource           = cms.InputTag("slimmedMuons"),
         elSource           = cms.InputTag("slimmedElectrons"),
         getJetMCFlavour    = isMC,
         genJetCollection   = cms.InputTag(matchedGenJets),
         genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
+#        genParticles       = cms.InputTag("aggregatedGenLevel" if isMC else ""),
         jetCorrections     = jetCorrectionsAK4,
     )
     getattr(process,"patJetsAKCs"+labelR+"PF").embedPFCandidates = True
@@ -189,7 +221,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import akCs4PFJets
     setattr(process,"akCs"+labelR+"PFJets",
             akCs4PFJets.clone(
-                src = 'packedPFCandidates',
+                src = 'aggregatedPFCands',
+                # src = 'packedPFCandidates',
                 jetPtMin = jetPtMin,
                 rParam = jetR
             )
@@ -219,7 +252,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                                                             matched = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets")
     )
     process.patAlgosToolsTask.add(process.unsubUpdatedPatJetsDeepFlavour)
-
+    
     if doBtagging:
 
         process.pfUnifiedParticleTransformerAK4JetTagsDeepFlavour.model_path = 'RecoBTag/Combined/data/UParTAK4/HIN/V00/UParTAK4_PbPb_2023.onnx'
