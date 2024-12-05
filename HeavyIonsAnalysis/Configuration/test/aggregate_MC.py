@@ -224,3 +224,13 @@ process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
 process.pphfCoincFilter2Th4 = cms.Path(process.phfCoincFilter2Th4)
 process.pAna = cms.EndPath(process.skimanalysis)
 
+
+process.patJetsAK2PFUnsubJets.addBTagInfo = True
+process.patJetsAK2PFUnsubJets.addTagInfos = True
+process.patJetsAK2PFUnsubJets.tagInfoSources = cms.VInputTag(["pfInclusiveSecondaryVertexFinderTagInfos","pfImpactParameterTagInfos"])
+process.akCs2PFJetAnalyzer.doTracks = cms.untracked.bool(True)
+process.akCs2PFJetAnalyzer.ipTagInfoLabel = cms.untracked.string('pfImpactParameter')
+process.akCs2PFJetAnalyzer.svTagInfoLabel = cms.untracked.string('pfInclusiveSecondaryVertexFinder')
+
+process.aggregatedPFCands.ipTagInfoLabel = "pfImpactParameter"
+process.aggregatedPFCands.svTagInfoLabel = "pfInclusiveSecondaryVertexFinder"
