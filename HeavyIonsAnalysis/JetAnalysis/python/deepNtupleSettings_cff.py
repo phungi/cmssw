@@ -90,7 +90,18 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         primaryVertices = "offlineSlimmedPrimaryVertices"
     )
     process.inclusiveCandidateSecondaryVertices = inclusiveCandidateSecondaryVertices.clone()
-    process.svTask = cms.Task(process.inclusiveCandidateVertexFinder, process.candidateVertexMerger, process.candidateVertexArbitrator, process.inclusiveCandidateSecondaryVertices)
+
+    from RecoBTag.ImpactParameter.pfImpactParameterTagInfos_cfi import pfImpactParameterTagInfos
+    from RecoBTag.SecondaryVertex.pfInclusiveSecondaryVertexFinderTagInfos_cfi import pfInclusiveSecondaryVertexFinderTagInfos
+    process.pfImpactParameterTagInfos = pfImpactParameterTagInfos.clone(
+        jets = "ak"+labelR+"PFUnsubJets",
+        candidates = 'packedPFCandidates',
+        primaryVertex = "offlineSlimmedPrimaryVertices",
+        maxDeltaR = jetR
+    )
+    process.pfInclusiveSecondaryVertexFinderTagInfos = pfInclusiveSecondaryVertexFinderTagInfos.clone()
+
+    process.svTask = cms.Task(process.inclusiveCandidateVertexFinder, process.candidateVertexMerger, process.candidateVertexArbitrator, process.inclusiveCandidateSecondaryVertices,process.pfImpactParameterTagInfos, process.pfInclusiveSecondaryVertexFinderTagInfos)
     svSource = cms.InputTag("inclusiveCandidateSecondaryVertices")
 
     # Create unsubtracted reco jets
