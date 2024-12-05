@@ -24,7 +24,7 @@ process.source = cms.Source("PoolSource",
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(10000)
     )
 
 ###############################################################################
@@ -165,14 +165,15 @@ process.bDecayAna = process.HiGenParticleAna.clone(
 )
 process.genJetSequence += process.bDecayAna
 
-
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
 jetPtMin = 15
 jetAbsEtaMax = 2.5
+doCaloJets = False
 
-doTracks = False
-doSvtx = False
+doTracks = True
+doSvtx = True
+runAggregation = False
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -184,7 +185,7 @@ jetLabel = "2"
 
 # add candidate tagging, copy/paste to add other jet radii
 from HeavyIonsAnalysis.JetAnalysis.deepNtupleSettings_cff import candidateBtaggingMiniAOD
-candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = jetPtMin, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = doBtagging, labelR = jetLabel)
+candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = jetPtMin, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = doBtagging, labelR = jetLabel, runAggregation = runAggregation)
 
 # setup jet analyzer
 setattr(process,"akCs"+jetLabel+"PFJetAnalyzer",process.akCs4PFJetAnalyzer.clone())
@@ -194,6 +195,7 @@ getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doCaloJets = doCaloJets
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = jetPtMin
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetAbsEtaMax = cms.untracked.double(jetAbsEtaMax)
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").rParam = int(jetLabel)*0.1
@@ -225,12 +227,8 @@ process.pphfCoincFilter2Th4 = cms.Path(process.phfCoincFilter2Th4)
 process.pAna = cms.EndPath(process.skimanalysis)
 
 
+#### Tag infos
 process.patJetsAK2PFUnsubJets.addBTagInfo = True
 process.patJetsAK2PFUnsubJets.addTagInfos = True
 process.patJetsAK2PFUnsubJets.tagInfoSources = cms.VInputTag(["pfInclusiveSecondaryVertexFinderTagInfos","pfImpactParameterTagInfos"])
-process.akCs2PFJetAnalyzer.doTracks = cms.untracked.bool(True)
-process.akCs2PFJetAnalyzer.ipTagInfoLabel = cms.untracked.string('pfImpactParameter')
-process.akCs2PFJetAnalyzer.svTagInfoLabel = cms.untracked.string('pfInclusiveSecondaryVertexFinder')
 
-process.aggregatedPFCands.ipTagInfoLabel = "pfImpactParameter"
-process.aggregatedPFCands.svTagInfoLabel = "pfInclusiveSecondaryVertexFinder"

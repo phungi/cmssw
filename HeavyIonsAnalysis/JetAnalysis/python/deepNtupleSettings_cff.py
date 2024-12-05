@@ -1,7 +1,7 @@
 
 import FWCore.ParameterSet.Config as cms
 
-def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = False, labelR = "0"):
+def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = False, labelR = "0", runAggregation = False):
     # DeepNtuple settings
     jetR = 0.1*int(labelR)
     if labelR == "0": jetR = 0.4
@@ -65,6 +65,12 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                     rParam = jetR
                 )
         )
+        setattr(process,"ak"+labelR+"aggregatedGenJetsWithNu",
+                ak4GenJets.clone(
+                    src = 'aggregatedGenLevel',
+                    rParam = jetR
+                )
+        )
         process.packedGenParticlesForJetsNoNu = cms.EDFilter("CandPtrSelector",
             src = cms.InputTag("packedGenParticlesSignal"),
             cut = cms.string("abs(pdgId) != 12 && abs(pdgId) != 14 && abs(pdgId) != 16")
@@ -74,7 +80,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                     src = 'packedGenParticlesForJetsNoNu'
                 )
         )
-        process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
+        process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"),  getattr(process,"ak"+labelR+"aggregatedGenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
 
     # Remake secondary vertices
     from RecoVertex.AdaptiveVertexFinder.inclusiveVertexing_cff import inclusiveCandidateVertexFinder, candidateVertexMerger, candidateVertexArbitrator, inclusiveCandidateSecondaryVertices
@@ -176,7 +182,12 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.aggregatedPFCands.constitSrc = "packedPFCandidates"
     process.aggregatedPFCands.doGenJets = False
     process.aggregatedPFCands.aggregateWithTruthInfo = True
+    process.aggregatedPFCands.aggregateWithCuts = False
+    process.aggregatedPFCands.aggregateWithTMVA = False
+
     process.aggregatedPFCands.candToGenParticleMap = ["TrackToGenParticleMapProducer", "trackToGenParticleMap"]
+    process.aggregatedPFCands.ipTagInfoLabel = "pfImpactParameter"
+    process.aggregatedPFCands.svTagInfoLabel = "pfInclusiveSecondaryVertexFinder"
 
     process.aggregatedGenLevel  = process.aggregatedPFCands.clone(
         chargedOnly = cms.bool(True),
@@ -184,6 +195,9 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         jetSrc = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets"),
         constitSrc = cms.InputTag("packedGenParticles"),
         doGenJets = cms.bool(True),
+        aggregateWithTruthInfo = cms.bool(True),
+        aggregateWithCuts = cms.bool(False),
+        aggregateWithTMVA = cms.bool(False),
         candToGenParticleMap = cms.InputTag("TrackToGenParticleMapProducer", "genConstitToGenParticleMap"),
     )
 
@@ -201,13 +215,13 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         algo               = "ak", #name of algo must be in this format
         rParam             = jetR,
         pvSource           = cms.InputTag("offlineSlimmedPrimaryVertices"),
-#        pfCandidates       = cms.InputTag("packedPFCandidates"),
-        pfCandidates       = cms.InputTag("aggregatedPFCands"),
+        pfCandidates       = cms.InputTag("aggregatedPFCands" if runAggregation else "packedPFCandidates"),
         svSource           = svSource,
         muSource           = cms.InputTag("slimmedMuons"),
         elSource           = cms.InputTag("slimmedElectrons"),
         getJetMCFlavour    = isMC,
-        genJetCollection   = cms.InputTag(matchedGenJets),
+        #genJetCollection   = cms.InputTag(matchedGenJets),
+        genJetCollection   = cms.InputTag("ak"+labelR+"aggregatedGenJetsWithNu" if runAggregation else matchedGenJets),       
         genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
 #        genParticles       = cms.InputTag("aggregatedGenLevel" if isMC else ""),
         jetCorrections     = jetCorrectionsAK4,
@@ -232,8 +246,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import akCs4PFJets
     setattr(process,"akCs"+labelR+"PFJets",
             akCs4PFJets.clone(
-                src = 'aggregatedPFCands',
-                # src = 'packedPFCandidates',
+                src = 'aggregatedPFCands' if runAggregation else 'packedPFCandidates',
                 jetPtMin = jetPtMin,
                 rParam = jetR
             )
@@ -248,7 +261,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         labelName = "DeepFlavour",
         jetSource = cms.InputTag("slimmedJets" if labelR == "0" else "patJetsAKCs"+labelR+"PF"), 
         jetCorrections = jetCorrectionsAK4,
-        pfCandidates = cms.InputTag('packedPFCandidates'),
+        pfCandidates = cms.InputTag('packedPFCandidates'),  #### ?
         pvSource = cms.InputTag("offlineSlimmedPrimaryVertices"),
         svSource = svSource,
         muSource = cms.InputTag('slimmedMuons'),

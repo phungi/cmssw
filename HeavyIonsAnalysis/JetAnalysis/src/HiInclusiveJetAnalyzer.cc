@@ -302,7 +302,7 @@ void HiInclusiveJetAnalyzer::beginJob() {
     if (isMC_) {
       t->Branch("mjtHadronFlavor", jets_.mjtHadronFlavor, "mjtHadronFlavor[nref]/I");
       t->Branch("mjtPartonFlavor", jets_.mjtPartonFlavor, "mjtPartonFlavor[nref]/I");
-      t->Branch("mjtNbHad", jets_.mjtNbHad, "mjtNbHad[nref]/I");
+      t->Branch("mjtNbad", jets_.mjtNbHad, "mjtNbHad[nref]/I");
       t->Branch("mjtNcHad", jets_.mjtNcHad, "mjtNcHad[nref]/I");
     }
   }
