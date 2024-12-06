@@ -51,8 +51,9 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '132X_mcRun3_2023_realistic_HI_v10', '')
-if doRun2: 
-    process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc_hi', '')
+if doRun2:   # auto:phase1_2018_realistic_hi
+#    process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc_hi', '')
+    process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2018_realistic_hi', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
@@ -169,7 +170,7 @@ process.bDecayAna = process.HiGenParticleAna.clone(
     ptMin = cms.untracked.double(0),
     stableOnly = False
 )
-process.genJetSequence += process.bDecayAna
+# process.genJetSequence += process.bDecayAna
 
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
@@ -203,6 +204,7 @@ getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doCaloJets = doCaloJets
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = jetPtMin
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").useRawPt = cms.untracked.bool(False)
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetAbsEtaMax = cms.untracked.double(jetAbsEtaMax)
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").rParam = int(jetLabel)*0.1
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetFlavourInfos = "ak"+jetLabel+"PFUnsubJetFlavourInfos"

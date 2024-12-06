@@ -210,7 +210,7 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
 
                         // Add particle to output collection or from HF map
                         if (status >= 100) {
-			  std::cout << "---- Filled gen level HF map" << std::endl;               
+			  //  std::cout << "---- Filled gen level HF map" << std::endl;               
                             hfConstituentsMap[status].push_back(constit);
                         }
 

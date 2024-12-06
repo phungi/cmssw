@@ -261,7 +261,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         labelName = "DeepFlavour",
         jetSource = cms.InputTag("slimmedJets" if labelR == "0" else "patJetsAKCs"+labelR+"PF"), 
         jetCorrections = jetCorrectionsAK4,
-        pfCandidates = cms.InputTag('packedPFCandidates'),  #### ?
+        pfCandidates = cms.InputTag('packedPFCandidates'),
         pvSource = cms.InputTag("offlineSlimmedPrimaryVertices"),
         svSource = svSource,
         muSource = cms.InputTag('slimmedMuons'),
@@ -270,6 +270,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         btagDiscriminators = bTagDiscriminators,
         explicitJTA = False
     )
+
+#    process.patJetCorrFactorsDeepFlavour.payload = 'AK'+labelR+'PF'
 
     process.unsubUpdatedPatJetsDeepFlavour = cms.EDProducer("JetMatcherDR",
                                                             source = cms.InputTag("updatedPatJetsDeepFlavour"),
