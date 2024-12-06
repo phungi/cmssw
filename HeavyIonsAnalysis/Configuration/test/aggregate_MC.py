@@ -2,9 +2,16 @@
 # Input: miniAOD
 # Type: mc
 
+doRun2 = True
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_pp_on_PbPb_2023_cff import Run3_pp_on_PbPb_2023
-process = cms.Process('HiForest', Run3_pp_on_PbPb_2023)
+
+if doRun2:
+    from Configuration.Eras.Era_Run2_2018_pp_on_AA_cff import Run2_2018_pp_on_AA
+    from Configuration.ProcessModifiers.run2_miniAOD_pp_on_AA_103X_cff import run2_miniAOD_pp_on_AA_103X
+    process = cms.Process('HiForest', Run2_2018_pp_on_AA,run2_miniAOD_pp_on_AA_103X)
+else:
+    from Configuration.Eras.Era_Run3_pp_on_PbPb_2023_cff import Run3_pp_on_PbPb_2023
+    process = cms.Process('HiForest', Run3_pp_on_PbPb_2023)
 
 ###############################################################################
 
@@ -19,12 +26,17 @@ process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
         '/store/group/phys_heavyions/jviinika/PythiaHydjetRun3_5p36TeV_dijet_ptHat15_100kEvents_miniAOD_2023_08_30/PythiaHydjetDijetRun3/PythiaHydjetRun3_dijet_ptHat15_5p36TeV_miniAOD/230830_165931/0000/pythiaHydjet_miniAOD_11.root'
-    ),
+    ),                            
 )
+
+if doRun2:
+#    process.source.fileNames = '/store/himc/HINPbPbSpring21MiniAOD/Bjet_pThat-15_TuneCP5_HydjetDrumMB_5p02TeV_Pythia8/MINIAODSIM/FixL1CaloGT_New_Release_112X_upgrade2018_realistic_HI_v9-v1/260000/6700a2b8-9c0d-4e1a-a774-2463e1e57785.root'
+    process.source.fileNames = cms.untracked.vstring('/store/group/phys_heavyions/lamartik/bjet/043213d2-944a-4e18-b1b5-ef71e93ef850.root')
+
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10000)
+    input = cms.untracked.int32(100)
     )
 
 ###############################################################################
@@ -39,6 +51,8 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '132X_mcRun3_2023_realistic_HI_v10', '')
+if doRun2: 
+    process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc_hi', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
@@ -47,7 +61,13 @@ process.GlobalTag.toGet.extend([
              connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")
          )
 ])
-
+if doRun2:
+    process.GlobalTag.toGet.extend([
+        cms.PSet(record = cms.string("GEMRecoGeometryRcd"),
+                 tag = cms.string("GEMRECO_Geometry_131DD4hepV1_mc_v2"),
+                 connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")
+             )
+    ])
 
 ###############################################################################
 
@@ -85,21 +105,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 #process.hltobject.triggerNames = trigger_list_mc
 
 ################################
-# electrons, photons, muons
-process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
-process.ggHiNtuplizer.doGenParticles = cms.bool(True)
-process.ggHiNtuplizer.doMuons = cms.bool(False)
-process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
-################################
 # jet reco sequence
 process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_mc_cff')
-################################
-# tracks
-process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
-#muons
-process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
-process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
-process.muonAnalyzer.doGen = cms.bool(True)
 
 ###############################################################################
 
@@ -173,7 +180,7 @@ doCaloJets = False
 
 doTracks = True
 doSvtx = True
-runAggregation = False
+runAggregation = True
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -232,3 +239,4 @@ process.patJetsAK2PFUnsubJets.addBTagInfo = True
 process.patJetsAK2PFUnsubJets.addTagInfos = True
 process.patJetsAK2PFUnsubJets.tagInfoSources = cms.VInputTag(["pfInclusiveSecondaryVertexFinderTagInfos","pfImpactParameterTagInfos"])
 
+process.patJetsAK2PFUnsubJets.addDiscriminators = False
