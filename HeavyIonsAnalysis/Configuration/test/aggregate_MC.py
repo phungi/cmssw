@@ -146,7 +146,6 @@ process.forest = cms.Path(
 
 #customisation
 process.particleFlowAnalyser.ptMin = 0.0
-process.ggHiNtuplizer.muonPtMin = 0.0
 
 # Gen
 process.load("GeneratorInterface.RivetInterface.mergedGenParticles_cfi")

@@ -139,21 +139,25 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
       int itdum = 0;
       for (auto const& dummy : hltdummies) {
         TString dummyname(dummy.data());
-        t_->Branch(dummyname, hltflag + itdum, dummyname + "/I");
-        t_->Branch(dummyname + "_PrescaleNumerator", hltPrescaleNumerator + itdum, dummyname + "_PrescaleNumerator/I");
-        t_->Branch(dummyname + "_PrescaleDenominator", hltPrescaleDenominator + itdum, dummyname + "_PrescaleDenominator/I");
-        pathtoindex[dummy] = itdum;
-        ++itdum;
+        if(dummyname.Contains("HLT_HIPuAK4CaloJet") && dummyname.Contains("Eta5p1") && !dummyname.Contains("Cent") ){
+	  t_->Branch(dummyname, hltflag + itdum, dummyname + "/I");
+	  t_->Branch(dummyname + "_PrescaleNumerator", hltPrescaleNumerator + itdum, dummyname + "_PrescaleNumerator/I");
+	  t_->Branch(dummyname + "_PrescaleDenominator", hltPrescaleDenominator + itdum, dummyname + "_PrescaleDenominator/I");
+	  pathtoindex[dummy] = itdum;
+	  ++itdum;
+	}
       }
 
       for (int itrig = 0; itrig != ntrigs; ++itrig) {
         const std::string& trigname = triggerNames.triggerName(itrig);
         if (pathtoindex.find(trigname) == pathtoindex.end()) {
           TString hltname = trigname;
-          t_->Branch(hltname, hltflag + itdum + itrig, hltname + "/I");
-          t_->Branch(hltname + "_PrescaleNumerator", hltPrescaleNumerator + itdum + itrig, hltname + "_PrescaleNumerator/I");
-          t_->Branch(hltname + "_PrescaleDenominator", hltPrescaleDenominator + itdum + itrig, hltname + "_PrescaleDenominator/I");
-          pathtoindex[trigname] = itdum + itrig;
+	  if(hltname.Contains("HLT_HIPuAK4CaloJet") && hltname.Contains("Eta5p1") && !hltname.Contains("Cent") ){
+	    t_->Branch(hltname, hltflag + itdum + itrig, hltname + "/I");
+	    t_->Branch(hltname + "_PrescaleNumerator", hltPrescaleNumerator + itdum + itrig, hltname + "_PrescaleNumerator/I");
+	    t_->Branch(hltname + "_PrescaleDenominator", hltPrescaleDenominator + itdum + itrig, hltname + "_PrescaleDenominator/I");
+	    pathtoindex[trigname] = itdum + itrig;
+	  }
         }
       }
 
@@ -164,14 +168,17 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
     FractionalPrescale thisTriggerPrescale;
     for (int itrig = 0; itrig != ntrigs; ++itrig) {
       const std::string& trigname = triggerNames.triggerName(itrig);
-      bool accept = hltresults->accept(itrig);
-
-      int index = pathtoindex[trigname];
-      thisTriggerPrescale = hltPrescaleProvider_->prescaleValue<FractionalPrescale>(iEvent, iSetup, trigname);
-      hltPrescaleNumerator[index] = thisTriggerPrescale.numerator();
-      hltPrescaleDenominator[index] = thisTriggerPrescale.denominator();
-
-      hltflag[index] = accept;
+      TString hltname = trigname;
+      if(hltname.Contains("HLT_HIPuAK4CaloJet") && hltname.Contains("Eta5p1") && !hltname.Contains("Cent") ){
+	bool accept = hltresults->accept(itrig);
+	
+	int index = pathtoindex[trigname];
+	thisTriggerPrescale = hltPrescaleProvider_->prescaleValue<FractionalPrescale>(iEvent, iSetup, trigname);
+	hltPrescaleNumerator[index] = thisTriggerPrescale.numerator();
+	hltPrescaleDenominator[index] = thisTriggerPrescale.denominator();
+	
+	hltflag[index] = accept;
+      }
     }
   } else {
     edm::LogInfo("TriggerAnalyzer") << "-- No Trigger Result" << std::endl;
@@ -198,12 +205,13 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
       int itdum = 0;
       for (auto const& dummy : l1dummies) {
         TString dummyname(dummy.data());
-        t_->Branch(dummyname, l1flag + itdum, dummyname + "/I");
-        t_->Branch(dummyname + "_Prescl", l1Prescl + itdum, dummyname + "_Prescl/I");
-        pathtoindex[dummy] = itdum;
-        ++itdum;
+        if(dummyname.Contains("HLT_HIPuAK4CaloJet") && dummyname.Contains("Eta5p1") && !dummyname.Contains("Cent") ){
+	  t_->Branch(dummyname, l1flag + itdum, dummyname + "/I");
+	  t_->Branch(dummyname + "_Prescl", l1Prescl + itdum, dummyname + "_Prescl/I");
+	  pathtoindex[dummy] = itdum;
+	  ++itdum;
+	}
       }
-
       int il1 = 0;
       // get the bit/name association
       for (auto const& keyval : menu->getAlgorithmMap()) {
@@ -211,10 +219,12 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
 
         if (pathtoindex.find(trigname) == pathtoindex.end()) {
           TString l1name = trigname;
-          t_->Branch(l1name, l1flag + itdum + il1, l1name + "/I");
-          t_->Branch(l1name + "_Prescl", l1Prescl + itdum + il1, l1name + "_Prescl/I");
-          pathtoindex[trigname] = itdum + il1;
-          ++il1;
+	  if(l1name.Contains("HLT_HIPuAK4CaloJet") && l1name.Contains("Eta5p1") && !l1name.Contains("Cent") ){
+	    t_->Branch(l1name, l1flag + itdum + il1, l1name + "/I");
+	    t_->Branch(l1name + "_Prescl", l1Prescl + itdum + il1, l1name + "_Prescl/I");
+	    pathtoindex[trigname] = itdum + il1;
+	    ++il1;
+	  }
         }
       }  // end algo Map
 
