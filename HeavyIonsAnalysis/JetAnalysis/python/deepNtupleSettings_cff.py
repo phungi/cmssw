@@ -190,7 +190,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.aggregatedPFCands.svTagInfoLabel = "pfInclusiveSecondaryVertexFinder"
 
     process.aggregatedGenLevel  = process.aggregatedPFCands.clone(
-        chargedOnly = cms.bool(True),
+        chargedOnly = cms.bool(False),
         aggregateHF = cms.bool(True),
         jetSrc = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets"),
         constitSrc = cms.InputTag("packedGenParticles"),
