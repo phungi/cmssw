@@ -68,6 +68,8 @@ private:
   void IterativeDeclustering(std::vector<fastjet::PseudoJet> jetConstituents, reco::PFCandidate pseudoHF);
   
   void RecoTruthSplitMatching(std::vector<fastjet::PseudoJet> &constituents_level1, fastjet::PseudoJet &hardest_level2, bool *bool_array, int *hardest_level1_split);
+  void TruthRecoRecoTruthMatching_SD();
+  void TruthRecoRecoTruthMatching_latekt();
   void TruthRecoRecoTruthMatching();
 
   //int getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandidateCollection *pfCandidateColl);
@@ -117,16 +119,20 @@ private:
   std::vector<std::string> tmva_variable_names_;
   std::vector<std::string> tmva_spectator_names_;
 
-  bool doChargedConstOnly_ = true;
+  bool doChargedConstOnly_;
+  bool runSubstructure;
+  bool doPFjetID;
   
   double ptCut;
   double trkInefRate_;
+
+  float SDcut = 1.0;
+  float latektcut = 1.0;
 
   bool aggregateHF;
   bool withTruthInfo_;
   bool withCuts_;
   bool withTMVA_;
-  bool doGenJets_ = false;
   bool useOnlyMatched_ = true;
   
   bool doMatch_;
@@ -164,6 +170,11 @@ private:
   bool doSvtx_;
   std::string svTagInfoLabel_;
   bool doJetTrueFlavour_;
+
+  bool doPFNeutralEnergyScaleVar_;
+  bool doPFChargedEnergyScaleVar_;
+  bool doPFGammaEnergyScaleVar_;
+  bool doSplitMatching_;
   
   TTree* t;
   edm::Service<TFileService> fs1;
@@ -231,10 +242,31 @@ private:
     int jtdroppedBranches[MAXJETS] = {0};
 
     ///////// SUBSTR
-    float jtdyn_var[MAXJETS]={0};
+    float jt_z_SD[MAXJETS] = {0};
+    float jt_rg_SD[MAXJETS] = {0};
+    float jt_ktg_SD[MAXJETS] = {0};
+    int jt_split_SD[MAXJETS] = {0};
+
+    float jt_z_latekt[MAXJETS] = {0};
+    float jt_rg_latekt[MAXJETS] = {0};
+    float jt_ktg_latekt[MAXJETS] = {0};
+    int jt_split_latekt[MAXJETS] = {0};
+
+    // For matching the splittings between reco and gen
+    std::vector<fastjet::PseudoJet> jtJetSplits = {};
+    std::vector<fastjet::PseudoJet> refJetSplits = {};
+
+    bool jt_isClosestToTruth_latekt[MAXJETS] = {0};
+    bool ref_isClosestToReco_latekt[MAXJETS] = {0};
+    float jt_ref_dR_latekt[MAXJETS] = {0};
+    bool jt_isClosestToTruth_SD[MAXJETS] = {0};
+    bool ref_isClosestToReco_SD[MAXJETS] = {0};
+    float jt_ref_dR_SD[MAXJETS] = {0};
+
+    
+    /*    float jtdyn_var[MAXJETS]={0};
     int jtdyn_split[MAXJETS]={0};
 
-    // float jtdyn_theta[MAXJETS];
     float jtdyn_deltaR[MAXJETS]={0};
     float jtdyn_kt[MAXJETS]={0};
     float jtdyn_z[MAXJETS]={0};
@@ -242,7 +274,6 @@ private:
     float jt_girth[MAXJETS]={0};
 
     float refdyn_var[MAXJETS]={0};
-    int refdyn_split[MAXJETS]={0};
     // float refdyn_theta[MAXJETS];
     float refdyn_deltaR[MAXJETS]={0};
     float refdyn_kt[MAXJETS]={0};
@@ -253,7 +284,7 @@ private:
     
     bool jtdyn_isClosestToTruth[MAXJETS]={0};
     bool refdyn_isClosestToReco[MAXJETS]={0};
-    float jtdyn_refdyn_dR[MAXJETS]={0};
+    float jtdyn_refdyn_dR[MAXJETS]={0}; */
 
     /*    std::vector<std::vector<float>> jtSubJetPt;
 	  std::vector<std::vector<float>> jtSubJetEta;
@@ -408,6 +439,7 @@ private:
     float svtxpt[MAXJETS] = {0};
     float svtxmcorr[MAXJETS] = {0};
     float svtxnormchi2[MAXJETS] = {0};
+    float svtxchi2[MAXJETS] = {0};
     float svJetDeltaR[MAXJETS] = {0};
     float svtxTrkSumChi2[MAXJETS] = {0};
     int svtxTrkNetCharge[MAXJETS] = {0};
