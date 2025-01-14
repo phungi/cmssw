@@ -36,7 +36,7 @@ if doRun2:
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(100)
+    input = cms.untracked.int32(1000)
     )
 
 ###############################################################################
@@ -166,7 +166,7 @@ process.bDecayAna = process.HiGenParticleAna.clone(
     partonMEOnly = cms.untracked.bool(False),
     chargedOnly = True, 
     doHI = False,
-    etaMax = cms.untracked.double(10),
+    etaMax = cms.untracked.double(30),
     ptMin = cms.untracked.double(0),
     stableOnly = False
 )
@@ -178,12 +178,14 @@ jetPtMin = 15
 jetAbsEtaMax = 2.5
 doCaloJets = False
 
-doTracks = True
-doSvtx = True
+# Toggle on/off for saving track info
+doTracks = False
+doSvtx = False
+
 runAggregation = True
 
 # Choose which additional information is added to jet trees
-doHIJetID = True             # Fill jet ID and composition information branches
+doHIJetID = False             # Fill jet ID and composition information branches
 doWTARecluster = False        # Add jet phi and eta for WTA axis
 doBtagging  =  True         # Note that setting to True increases computing time a lot
 
@@ -198,13 +200,18 @@ candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = jetPtMin, jetCorrLevel
 setattr(process,"akCs"+jetLabel+"PFJetAnalyzer",process.akCs4PFJetAnalyzer.clone())
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetTag = 'selectedUpdatedPatJetsDeepFlavour'
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetName = 'akCs'+jetLabel+'PF'
+#getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").genjetTag = "ak"+jetLabel+"GenJetsWithNu"
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").genjetTag = "ak"+jetLabel+"aggregatedGenJetsWithNu" 
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").runSubstructure = cms.untracked.bool(True)
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doCaloJets = doCaloJets
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = jetPtMin
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = 60
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").genPtMin = 30
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").useRawPt = cms.untracked.bool(False)
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doPFjetID = cms.untracked.bool(True)
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetAbsEtaMax = cms.untracked.double(jetAbsEtaMax)
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").rParam = int(jetLabel)*0.1
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetFlavourInfos = "ak"+jetLabel+"PFUnsubJetFlavourInfos"

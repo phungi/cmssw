@@ -182,6 +182,7 @@ void HiInclusiveJetAnalyzer::beginJob() {
   t->Branch("jtarea", jets_.jtarea, "jtarea[nref]/F");
 
   t->Branch("massHF", jets_.massHF, "massHF[nref]/F");
+  t->Branch("massHFgen", jets_.massHFgen, "massHFgen[nref]/F");
   
   if(doCaloJets_){
     t->Branch("ncalo", &jets_.ncalo, "ncalo/I");
@@ -350,11 +351,36 @@ void HiInclusiveJetAnalyzer::beginJob() {
     t->Branch("jt_rg_SD",jets_.jt_rg_SD,"jt_rg_SD[nref]/F");
     t->Branch("jt_ktg_SD",jets_.jt_ktg_SD,"jt_ktg_SD[nref]/F");
     t->Branch("jt_split_SD",jets_.jt_split_SD,"jt_split_SD[nref]/I");
+    t->Branch("jt_hasHF_SD",jets_.jt_hasHF_SD,"jt_hasHF_SD[nref]/O");
 
     t->Branch("jt_z_latekt",jets_.jt_z_latekt,"jt_z_latekt[nref]/F");
     t->Branch("jt_rg_latekt",jets_.jt_rg_latekt,"jt_rg_latekt[nref]/F");
     t->Branch("jt_ktg_latekt",jets_.jt_ktg_latekt,"jt_ktg_latekt[nref]/F");
-    t->Branch("jt_split_latekt",jets_.jt_split_latekt,"jt_split_latekt[nref]/I"); 
+    t->Branch("jt_split_latekt",jets_.jt_split_latekt,"jt_split_latekt[nref]/I");
+    t->Branch("jt_hasHF_latekt",jets_.jt_hasHF_latekt,"jt_hasHF_latekt[nref]/O");
+
+    if (isMC_) {
+      t->Branch("ref_z_SD",jets_.ref_z_SD,"ref_z_SD[nref]/F");
+      t->Branch("ref_rg_SD",jets_.ref_rg_SD,"ref_rg_SD[nref]/F");
+      t->Branch("ref_ktg_SD",jets_.ref_ktg_SD,"ref_ktg_SD[nref]/F");
+      t->Branch("ref_split_SD",jets_.ref_split_SD,"ref_split_SD[nref]/I");
+      t->Branch("ref_hasHF_SD",jets_.jt_hasHF_SD,"jt_hasHF_SD[nref]/O");
+      
+      t->Branch("ref_z_latekt",jets_.ref_z_latekt,"ref_z_latekt[nref]/F");
+      t->Branch("ref_rg_latekt",jets_.ref_rg_latekt,"ref_rg_latekt[nref]/F");
+      t->Branch("ref_ktg_latekt",jets_.ref_ktg_latekt,"ref_ktg_latekt[nref]/F");
+      t->Branch("ref_split_latekt",jets_.ref_split_latekt,"ref_split_latekt[nref]/I");
+      t->Branch("ref_hasHF_latekt",jets_.jt_hasHF_latekt,"jt_hasHF_latekt[nref]/O");
+
+      t->Branch("jt_isClosestToTruth_latekt", jets_.jt_isClosestToTruth_latekt,"jt_isClosestToTruth_latekt[nref]/O");
+      t->Branch("ref_isClosestToReco_latekt", jets_.ref_isClosestToReco_latekt,"ref_isClosestToReco_latekt[nref]/O");
+      t->Branch("jt_ref_dR_latekt", jets_.jt_ref_dR_latekt,"jt_ref_dR_latekt[nref]/F");
+    
+      t->Branch("jt_isClosestToTruth_SD", jets_.jt_isClosestToTruth_SD,"jt_isClosestToTruth_SD[nref]/O");
+      t->Branch("ref_isClosestToReco_SD", jets_.ref_isClosestToReco_SD,"ref_isClosestToReco_SD[nref]/O");
+      t->Branch("jt_ref_dR_SD", jets_.jt_ref_dR_SD,"jt_ref_dR_SD[nref]/F");
+
+    }
   }
   
   if (isMC_) {
@@ -1148,11 +1174,8 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     //      }
     //    }
 
-    fastjet::PseudoJet *sub1Hyb = new fastjet::PseudoJet();
-    fastjet::PseudoJet *sub2Hyb = new fastjet::PseudoJet();
     //    IterativeDeclusteringRec(groom_type, groom_combine, jet, sub1Hyb, sub2Hyb);
-    if (runSubstructure) IterativeDeclusteringRec(0, 1, jet, sub1Hyb, sub2Hyb);
-
+    if (runSubstructure) IterativeDeclusteringRec(0, 1, jet);
     
     if (isMC_) {
       const reco::GenJet* genjet = jet.genJet();
@@ -1166,6 +1189,18 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
         jets_.refy[jets_.nref] = genjet->eta();
         jets_.refdphijt[jets_.nref] = reco::deltaPhi(jet.phi(), genjet->phi());
         jets_.refdrjt[jets_.nref] = reco::deltaR(jet.eta(), jet.phi(), genjet->eta(), genjet->phi());
+
+	if (runSubstructure) {
+	  IterativeDeclusteringGen(0, 1, *genjet);
+
+	  if (doSplitMatching_) {
+	    TruthRecoRecoTruthMatching_SD();
+	    TruthRecoRecoTruthMatching_latekt();
+	    //vangi's
+	    jets_.jtJetSplits = {};
+	    jets_.refJetSplits = {};	    
+	  }
+	}
 
         if (doSubEvent_) {
           const GenParticle* gencon = genjet->getGenConstituent(0);
@@ -1233,6 +1268,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       jets_.refparton_flavor[jets_.nref] = -999;
       //      }
     }
+
     jets_.nref++;
   }
 
@@ -1379,12 +1415,13 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 
 
 
-void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet, fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2)
+void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet)
 {
   
   Int_t nsplit = 0;
 
   double z = 0;
+  
   double zg_SD = 0;
   double zg_latekt = 0;
 
@@ -1394,8 +1431,8 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
   double rg_SD = 0;
   double rg_latekt = 0;
 
-  Int_t SD_split = -1; //IO
-  Int_t latekt_split = -1; //IO
+  Int_t SD_split = -1; 
+  Int_t latekt_split = -1;
 
   double jet_radius_ca = 1.0;
 
@@ -1406,47 +1443,48 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     std::vector<fastjet::PseudoJet> particles = {};                         
     auto daughters = jet.getJetConstituents();
 
-    for(auto it = daughters.begin(); it!=daughters.end(); ++it){
+    for (auto it = daughters.begin(); it!=daughters.end(); ++it){
+      //      std::cout << "scan jet consts, mass: " << (**it).mass() << " charge: " << (**it).charge() << " id: "<< (**it).pdgId() << std::endl;
+      if ((**it).mass() < 0 and (**it).pdgId() != 22) jets_.massHF[jets_.nref] = -((**it).mass());
      
       //if we want only charged constituents and the daughter charge is 0, skip it
-      if(doChargedConstOnly_ && (**it).charge()==0) continue; 
+      if (doChargedConstOnly_ && (**it).charge()==0) continue; 
       
-      if((**it).pt()<1) continue; //Particle pt cut
+      if ((**it).pt()<1) continue; //Particle pt cut
 
       double PFE_scale = 1.;
 
-      if(isMC_){ //if it is MC, rescale the 4-momentum of the particles by pfCCES(+-1%)
+      if (isMC_){ //if it is MC, rescale the 4-momentum of the particles by pfCCES(+-1%)
         if ((**it).charge()!=0){ //if Charged candidate
 
-          if(doPFChargedEnergyScaleVar_ == 1.)       PFE_scale = 1. + 0.01;
-          else if(doPFChargedEnergyScaleVar_ == -1.) PFE_scale = 1. - 0.01;
-          else if(doPFChargedEnergyScaleVar_ == 0.)  PFE_scale = 1.;
-          else cout<<"you should not be here (Charged)"<<endl;
+          if (doPFChargedEnergyScaleVar_ == 1.)       PFE_scale = 1. + 0.01;
+          else if (doPFChargedEnergyScaleVar_ == -1.) PFE_scale = 1. - 0.01;
+          else if (doPFChargedEnergyScaleVar_ == 0.)  PFE_scale = 1.;
+          else cout << "you should not be here (Charged)" << endl;
         }
 
-        else if((**it).pdgId()==130){//If Neutral candidate
+        else if ((**it).pdgId()==130){//If Neutral candidate
 
           if(doPFNeutralEnergyScaleVar_ == 1.)       PFE_scale = 1. + 0.05;
           else if(doPFNeutralEnergyScaleVar_ == -1.) PFE_scale = 1. - 0.05;
           else if(doPFNeutralEnergyScaleVar_ == 0.)  PFE_scale = 1.;
-          else cout<<"you should not be here (Neutral)"<<endl;
+          else cout << "you should not be here (Neutral)" << endl;
         }
 
-        else if((**it).pdgId()==22){  //If Gamma candidate
+        else if ((**it).pdgId()==22){  //If Gamma candidate
 
-          if(doPFGammaEnergyScaleVar_ == 1.)         PFE_scale = 1. + 0.03;
-          else if(doPFGammaEnergyScaleVar_ == -1.)   PFE_scale = 1. - 0.03;
-          else if(doPFGammaEnergyScaleVar_ == 0.)    PFE_scale = 1.;
-          else cout<<"you should not be here (Gamma)"<<endl;
+          if (doPFGammaEnergyScaleVar_ == 1.)         PFE_scale = 1. + 0.03;
+          else if (doPFGammaEnergyScaleVar_ == -1.)   PFE_scale = 1. - 0.03;
+          else if (doPFGammaEnergyScaleVar_ == 0.)    PFE_scale = 1.;
+          else cout << "you should not be here (Gamma)" << endl;
         }
 
-        else cout<<"You should not be here (general)!! What's this particle: " << (**it).pdgId() << std::endl;
+        else cout << "Found no charged, charged or photon candidaties; pdgID: " << (**it).pdgId() << std::endl;
       }
-      
       particles.push_back(fastjet::PseudoJet((**it).px()*PFE_scale, (**it).py()*PFE_scale, (**it).pz()*PFE_scale, (**it).energy()*PFE_scale));
     }
 
-    if (particles.size() == 0){ //IO è necessario??
+    if (particles.size() == 0){ 
       jets_.jt_split_SD[jets_.nref] = std::numeric_limits<int>::min();
       jets_.jt_split_latekt[jets_.nref] = std::numeric_limits<int>::min();
     }
@@ -1459,9 +1497,6 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
       fastjet::PseudoJet jj = output_jets[0];
       fastjet::PseudoJet j1;
       fastjet::PseudoJet j2;
-      fastjet::PseudoJet j1first; 
-      fastjet::PseudoJet j2first; 
-      fastjet::PseudoJet highest_splitting;
 
       if(!jj.has_parents(j1,j2)) {
         jets_.jt_split_SD[jets_.nref] = std::numeric_limits<int>::min();
@@ -1469,12 +1504,25 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
       }
       
       int stopSD = 0;
-        
-      while(jj.has_parents(j1,j2)){
+      bool flagHF = false, flagHFSD = false, flagHFkt = false;
+      
+      while (jj.has_parents(j1,j2)) {
         if(j1.perp() < j2.perp()) std::swap(j1,j2);
-        vector < fastjet::PseudoJet > constitj1 = sorted_by_pt(j1.constituents());
+	//        vector <fastjet::PseudoJet> constitj1 = sorted_by_pt(j1.constituents());
+
+	std::vector<fastjet::PseudoJet> j1constits = j1.constituents();
+	for (size_t icon = 0; icon < j1constits.size(); icon++) {
+	  fastjet::PseudoJet constit = j1constits[icon];
+	  if ((constit.m() + jets_.massHF[jets_.nref]) < 1e-3) {
+	    flagHF = true; // the leading prong has the HF - it is possible a gamma has negative mass so use the massHF
+	    //std::cout << "pt  " << constit.pt() << " mass " << constit.m() << " " << flagHF << std::endl;
+	    break;
+	  }
+	}
+	//	std::cout << " ---------- " << std::endl;
+	
         double delta_R = j1.delta_R(j2);
-        if(doSplitMatching_ && isMC_) {
+        if (doSplitMatching_ && isMC_) {
           jets_.jtJetSplits.push_back(j2);
         }
         double k_t = j2.perp()*delta_R;
@@ -1482,43 +1530,42 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
 
       //  std::cout << "Reco split " << nsplit << " with k_T=" << k_t << " z=" << z << " eta " << j2.eta() << " phi " << j2.phi() <<  std::endl; 
 
-        if(((groom_combine == 0)&&(groom_type == 1)&&(z > SDcut)&&(stopSD == 0))||((groom_combine == 1)&&(z > SDcut)&&(stopSD == 0))){ 
-          //SD.
-          stopSD=1;
+        if (((groom_combine == 0) and (groom_type == 1) and (z > SDcut) and (stopSD == 0)) or ((groom_combine == 1) and (z > SDcut) and (stopSD == 0))) { 
+          stopSD = 1;
           zg_SD = z;
           rg_SD  = delta_R;
           ktg_SD = k_t;
-          SD_split = nsplit; 
+          SD_split = nsplit;
+	  flagHFSD = flagHF;
         }
         
-        if(((groom_combine == 0)&&(groom_type == 0)&&(k_t > latektcut))||((groom_combine == 1)&&(k_t > latektcut))){
-          //late kt    
+        if (((groom_combine == 0) and (groom_type == 0) and (k_t > latektcut)) or ((groom_combine == 1) and (k_t > latektcut))) {
           zg_latekt = z;
           rg_latekt  = delta_R;
           ktg_latekt = k_t;
           latekt_split = nsplit;
-          j1first =j1;
-          j2first =j2;
-          *sub1 = j1first;
-          *sub2 = j2first;
+	  flagHFkt = flagHF;
         }
         jj = j1;
         nsplit = nsplit+1;
       }
-    }
+    //  std::cout << "end results: " << zg_SD << " " << zg_latekt << std::endl;
     jets_.jt_z_SD[jets_.nref] = zg_SD;
     jets_.jt_rg_SD[jets_.nref] = rg_SD;
     jets_.jt_ktg_SD[jets_.nref] = ktg_SD;
     jets_.jt_split_SD[jets_.nref] = SD_split;
+    jets_.jt_hasHF_SD[jets_.nref] = flagHFSD;
 
     jets_.jt_z_latekt[jets_.nref] = zg_latekt;
     jets_.jt_rg_latekt[jets_.nref] = rg_latekt;
     jets_.jt_ktg_latekt[jets_.nref] = ktg_latekt;
     jets_.jt_split_latekt[jets_.nref] = latekt_split;
+    jets_.jt_hasHF_latekt[jets_.nref] = flagHFkt;
+    }
   } 
 
-  catch (fastjet::Error){ 
-    cout<<"Fastjet Error in Rec. Aiuto"<<endl;
+  catch (fastjet::Error const&){ 
+    cout << "Fastjet error" << endl;
   }
   catch (Int_t MyNum) {
     cout<<"catch neutralN = "<<jets_.neutralN[jets_.nref]<<endl;
@@ -1531,6 +1578,236 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
   }
   
 }
+
+void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double groom_combine,const reco::GenJet& jet)
+{
+  double nsplit = 0;
+
+  double z = 0;
+  double zg_SD = 0;
+  double zg_latekt = 0;
+
+  double ktg_SD = 0;
+  double ktg_latekt = 0;
+
+  double rg_SD = 0;
+  double rg_latekt = 0;
+
+  Int_t SD_split = -1; 
+  Int_t latekt_split = -1; 
+
+  double jet_radius_ca = 1.0;
+  
+	
+  fastjet::JetDefinition jet_def(fastjet::genkt_algorithm,jet_radius_ca,0,static_cast<fastjet::RecombinationScheme>(0), fastjet::Best);
+    // Reclustering jet constituents with new algorithm
+  try{
+    std::vector<fastjet::PseudoJet> particles = {};                         
+    auto daughters = jet.getJetConstituents();
+    // fastjet::PseudoJet tmp_jet;
+
+
+    for(auto it = daughters.begin(); it!=daughters.end(); ++it){
+      // tmp_jet += fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy());
+      //      std::cout << "scan gen jet consts, mass: " << (**it).mass() << " charge: " << (**it).charge() << " id: "<< (**it).pdgId() << std::endl;
+      if ((**it).mass() < 0 and (**it).pdgId() != 22) jets_.massHFgen[jets_.nref] = -((**it).mass());
+      //if we want only charged constituents and the daughter charge is 0, skip it
+      if (doChargedConstOnly_ && (**it).charge()==0) continue;
+      //cout<<(**it).pt()<<endl;
+
+      if ((**it).pt()<1) continue; //Particle Pt cut
+      // std::cout << "scan gen jet consts, mass: " << (**it).mass() << " charge: " << (**it).charge() << std::endl;
+      // cout<<"pdg Id = "<< (**it).pdgId()<< ", pt = "<< (**it).pt() << ", eta = "<< (**it).eta() << endl;
+      particles.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
+    }
+      //  cout<< "tmp pt = " << tmp_jet.perp() << endl;
+
+    if (particles.size() == 0){ 
+      jets_.ref_split_SD[jets_.nref] = std::numeric_limits<int>::min();
+      jets_.ref_split_latekt[jets_.nref] = std::numeric_limits<int>::min();
+    }
+
+    if (particles.size() != 0 ) {
+      fastjet::ClusterSequence csiter(particles, jet_def);
+      std::vector<fastjet::PseudoJet> output_jets = csiter.inclusive_jets(0);
+      output_jets = sorted_by_pt(output_jets);
+
+      fastjet::PseudoJet jj = output_jets[0];
+      fastjet::PseudoJet j1;
+      fastjet::PseudoJet j2;
+
+      if(!jj.has_parents(j1,j2)) {
+        jets_.ref_split_SD[jets_.nref] = std::numeric_limits<int>::min();
+        jets_.ref_split_latekt[jets_.nref] = std::numeric_limits<int>::min();
+      }
+
+      int stopSD = 0;
+      bool flagHF = false, flagHFSD = false, flagHFkt = false;
+        
+      while (jj.has_parents(j1,j2)) {
+        if (j1.perp() < j2.perp()) std::swap(j1,j2); // j1 is the hardest prong
+	//        vector <fastjet::PseudoJet> constitj1 = sorted_by_pt(j1.constituents()); // Vector containing j1 costituents
+
+	std::vector<fastjet::PseudoJet> j1constits = j1.constituents();
+	for (size_t icon = 0; icon < j1constits.size(); icon++) {
+	  fastjet::PseudoJet constit = j1constits[icon];
+	  if ((constit.m() + jets_.massHF[jets_.nref]) < 1e-3) {
+	    flagHF = true; // the leading prong has the HF - it is possible a gamma has negative mass so use the massHF
+	    //std::cout << "pt  " << constit.pt() << " mass " << constit.m() << " " << flagHF << std::endl;
+	    break;
+	  }
+	}
+	//	std::cout << " ---------- " << std::endl;
+	
+	double delta_R = j1.delta_R(j2);
+        if (doSplitMatching_ && isMC_) {
+	  //vangi's
+          jets_.refJetSplits.push_back(j2);
+        }
+        double k_t = j2.perp()*delta_R;
+        z = j2.perp()/(j1.perp()+j2.perp());   
+
+      //  std::cout << "Truth split " << nsplit << " with k_T=" << k_t << " z=" << z << " eta " << j2.eta() << " phi " << j2.phi() <<  std::endl; 
+
+        if (((groom_combine == 0) and (groom_type == 1) and (z > SDcut) and (stopSD == 0)) or ((groom_combine == 1) and (z > SDcut) and (stopSD == 0))) { 
+          stopSD = 1;
+          zg_SD = z;
+          rg_SD  = delta_R;
+          ktg_SD = k_t;
+          SD_split = nsplit;
+	  flagHFSD = flagHF;
+        }
+        
+        if (((groom_combine == 0) and (groom_type == 0) and (k_t > latektcut)) or ((groom_combine == 1) and (k_t > latektcut))) {
+	  zg_latekt = z;
+          rg_latekt  = delta_R;
+          ktg_latekt = k_t;
+          latekt_split = nsplit;
+	  flagHFkt = flagHF;
+        }
+        jj = j1;
+        nsplit = nsplit+1;
+      }
+      jets_.ref_z_SD[jets_.nref] = zg_SD;
+      jets_.ref_rg_SD[jets_.nref] = rg_SD;
+      jets_.ref_ktg_SD[jets_.nref] = ktg_SD;
+      jets_.ref_split_SD[jets_.nref] = SD_split;
+      jets_.ref_hasHF_SD[jets_.nref] = flagHFSD;
+    
+      jets_.ref_z_latekt[jets_.nref] = zg_latekt;
+      jets_.ref_rg_latekt[jets_.nref] = rg_latekt;
+      jets_.ref_ktg_latekt[jets_.nref] = ktg_latekt;
+      jets_.ref_split_latekt[jets_.nref] = latekt_split;
+      jets_.ref_hasHF_latekt[jets_.nref] = flagHFkt;
+    }
+
+  }
+  catch (fastjet::Error const&){
+    cout << "Fastjet error in gen level" << endl;
+  }
+  catch (Int_t MyNum){
+    cout<<"MyNum catch"<<endl;
+    jets_.ref_z_SD[jets_.nref] = 0;
+    jets_.ref_rg_SD[jets_.nref] = 0;
+    jets_.ref_ktg_SD[jets_.nref] = 0;
+    jets_.ref_z_latekt[jets_.nref] = 0;
+    jets_.ref_rg_latekt[jets_.nref] = 0;
+    jets_.ref_ktg_latekt[jets_.nref] = 0;
+  }
+}
+
+//vangi's
+void HiInclusiveJetAnalyzer::RecoTruthSplitMatching(std::vector<fastjet::PseudoJet> &allSplitsLevel1, fastjet::PseudoJet &toMatchLevel2, bool *bool_array, int *splitLevel1){
+  float mindR = std::numeric_limits<float>::max();
+  size_t closestInLevel1 = 0;
+   
+  for (size_t i{0}; i < allSplitsLevel1.size(); ++i) {
+    float dR = allSplitsLevel1.at(i).delta_R(toMatchLevel2);
+    if (mindR > dR) {
+      closestInLevel1 = i;
+      mindR = dR;
+    }
+  }
+  //  std::cout << "Looped over " <<  allSplitsLevel1.size() << " splittings, mindR was " << mindR << std::endl;
+  
+  if (static_cast<int>(closestInLevel1) == splitLevel1[jets_.nref] ) bool_array[jets_.nref] = true;
+  else bool_array[jets_.nref] = false;
+  // std::cout << "bool array at jet: " << bool_array[jets_.nref] << std::endl;
+}
+
+void HiInclusiveJetAnalyzer::TruthRecoRecoTruthMatching_latekt(){
+  // std::cout << "# reco latekt split: "<<jets_.jt_split_latekt[jets_.nref] << ", # truth latekt split " << jets_.ref_split_latekt[jets_.nref] << std::endl;
+  if( (jets_.jt_split_latekt[jets_.nref] == std::numeric_limits<int>::min())
+      or (jets_.ref_split_latekt[jets_.nref] == std::numeric_limits<int>::min())
+      or (jets_.jtJetSplits.size() == 0)
+      or (jets_.refJetSplits.size() == 0)) {
+    
+    jets_.ref_isClosestToReco_latekt[jets_.nref] = false;
+    jets_.jt_isClosestToTruth_latekt[jets_.nref] = false;
+    jets_.jt_ref_dR_latekt[jets_.nref] = std::numeric_limits<float>::max();
+    return;
+  }
+
+  if ( (jets_.jt_split_latekt[jets_.nref] == -1) and (jets_.ref_split_latekt[jets_.nref] == -1) ){
+    // std::cout<<"\nuntgged?\n"<<std::endl;
+    jets_.ref_isClosestToReco_latekt[jets_.nref] = true;
+    jets_.jt_isClosestToTruth_latekt[jets_.nref] = true;
+    jets_.jt_ref_dR_latekt[jets_.nref] = std::numeric_limits<float>::max();
+    return;
+  }
+  else if ( ((jets_.jt_split_latekt[jets_.nref] == -1) and (jets_.ref_split_latekt[jets_.nref] != -1)) or ((jets_.jt_split_latekt[jets_.nref] != -1) and (jets_.ref_split_latekt[jets_.nref] == -1)) ){
+    // std::cout<<"\nuntgged latekt?\n"<<std::endl;
+    jets_.ref_isClosestToReco_latekt[jets_.nref] = false;
+    jets_.jt_isClosestToTruth_latekt[jets_.nref] = false;
+    jets_.jt_ref_dR_latekt[jets_.nref] = std::numeric_limits<float>::max();
+    return;
+  }
+  else {
+    fastjet::PseudoJet latekt_R_split = jets_.jtJetSplits.at(jets_.jt_split_latekt[jets_.nref]);
+    fastjet::PseudoJet latekt_T_split = jets_.refJetSplits.at(jets_.ref_split_latekt[jets_.nref]);
+    // std::cout <<"Reco: eta = "<< latekt_R_split.eta() << ", phi = " << latekt_R_split.phi() << ", DeltaR = "<< latekt_R_split.delta_R(latekt_T_split) <<" latekt reco  splitting in matching" << std::endl;
+ 
+    // std::cout << "Angle between latekt splits is dR = " << latekt_R_split.delta_R(latekt_T_split) << std::endl;
+    // for(size_t i{0};i<jets_.jtJetConstituent.size();++i) std::cout<< " reco "<< i <<" : DeltaR = "<< jets_.jtJetConstituent.at(i).delta_R(latekt_T_split)<<", k_T = "<< jets_.jtJetConstituent.at(i).pt()<<" GeV"<< std::endl;
+    jets_.jt_ref_dR_latekt[jets_.nref] = latekt_R_split.delta_R(latekt_T_split);
+    RecoTruthSplitMatching(jets_.refJetSplits, latekt_R_split, jets_.ref_isClosestToReco_latekt, jets_.ref_split_latekt);
+    RecoTruthSplitMatching(jets_.jtJetSplits,  latekt_T_split, jets_.jt_isClosestToTruth_latekt, jets_.jt_split_latekt);
+  }
+}
+
+void HiInclusiveJetAnalyzer::TruthRecoRecoTruthMatching_SD(){
+  //  std::cout << "# reco SD split : "<<jets_.jt_split_SD[jets_.nref] << ", # truth SD split " << jets_.ref_split_SD[jets_.nref] << " consts " <<  jets_.jtJetSplits.size() << " " << jets_.refJetSplits.size() << std::endl;
+  if ((jets_.jt_split_SD[jets_.nref] == std::numeric_limits<int>::min()) or (jets_.ref_split_SD[jets_.nref] == std::numeric_limits<int>::min()) or (jets_.jtJetSplits.size() == 0) or  (jets_.refJetSplits.size() == 0) ) {
+    jets_.ref_isClosestToReco_SD[jets_.nref] = false;
+    jets_.jt_isClosestToTruth_SD[jets_.nref] = false;
+    jets_.jt_ref_dR_SD[jets_.nref] = std::numeric_limits<float>::max();
+    return;
+  }
+  
+  if( (jets_.jt_split_SD[jets_.nref] == -1) and (jets_.ref_split_SD[jets_.nref] == -1)) {
+    /// std::cout<<"\nuntgged?\n"<<std::endl;
+    jets_.ref_isClosestToReco_SD[jets_.nref] = true;
+    jets_.jt_isClosestToTruth_SD[jets_.nref] = true;
+    jets_.jt_ref_dR_SD[jets_.nref] = std::numeric_limits<float>::max();
+    return;
+  }
+  else if (((jets_.jt_split_SD[jets_.nref] == -1) and (jets_.ref_split_SD[jets_.nref] != -1)) or ((jets_.jt_split_SD[jets_.nref] != -1) and (jets_.ref_split_SD[jets_.nref] == -1))) {
+    //   std::cout<<"\nuntgged 2 SD?\n"<<std::endl;
+    jets_.ref_isClosestToReco_SD[jets_.nref] = false;
+    jets_.jt_isClosestToTruth_SD[jets_.nref] = false;
+    jets_.jt_ref_dR_SD[jets_.nref] = std::numeric_limits<float>::max();
+    return;
+  }
+  else {
+    //  std::cout<<"Run SD split matching"<<std::endl;
+    fastjet::PseudoJet SD_R_split = jets_.jtJetSplits.at(jets_.jt_split_SD[jets_.nref]);
+    fastjet::PseudoJet SD_T_split = jets_.refJetSplits.at(jets_.ref_split_SD[jets_.nref]);
+    jets_.jt_ref_dR_SD[jets_.nref] = SD_R_split.delta_R(SD_T_split);
+    RecoTruthSplitMatching(jets_.refJetSplits, SD_R_split, jets_.ref_isClosestToReco_SD, jets_.ref_split_SD);
+    RecoTruthSplitMatching(jets_.jtJetSplits,  SD_T_split, jets_.jt_isClosestToTruth_SD,  jets_.jt_split_SD);
+  }
+}
+
 
 int HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet,
                                          const edm::View<pat::PackedCandidate>* pfCandidateColl) {

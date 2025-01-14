@@ -62,10 +62,8 @@ private:
 
   typedef std::tuple<std::vector<fastjet::PseudoJet>, std::vector<reco::PFCandidate>, reco::PFCandidate> jetConstituentsPseudoHFTuple;
 
-  void IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet,    fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2);
-  void IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet, fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2);
-  //Decluster jets from aggregation
-  void IterativeDeclustering(std::vector<fastjet::PseudoJet> jetConstituents, reco::PFCandidate pseudoHF);
+  void IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet);
+  void IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet);
   
   void RecoTruthSplitMatching(std::vector<fastjet::PseudoJet> &constituents_level1, fastjet::PseudoJet &hardest_level2, bool *bool_array, int *hardest_level1_split);
   void TruthRecoRecoTruthMatching_SD();
@@ -126,7 +124,7 @@ private:
   double ptCut;
   double trkInefRate_;
 
-  float SDcut = 1.0;
+  float SDcut = 0.1;
   float latektcut = 1.0;
 
   bool aggregateHF;
@@ -174,7 +172,7 @@ private:
   bool doPFNeutralEnergyScaleVar_;
   bool doPFChargedEnergyScaleVar_;
   bool doPFGammaEnergyScaleVar_;
-  bool doSplitMatching_;
+  bool doSplitMatching_ = true;
   
   TTree* t;
   edm::Service<TFileService> fs1;
@@ -246,63 +244,30 @@ private:
     float jt_rg_SD[MAXJETS] = {0};
     float jt_ktg_SD[MAXJETS] = {0};
     int jt_split_SD[MAXJETS] = {0};
+    bool jt_hasHF_SD[MAXJETS] = {0};
 
     float jt_z_latekt[MAXJETS] = {0};
     float jt_rg_latekt[MAXJETS] = {0};
     float jt_ktg_latekt[MAXJETS] = {0};
     int jt_split_latekt[MAXJETS] = {0};
+    bool jt_hasHF_latekt[MAXJETS] = {0};
 
     // For matching the splittings between reco and gen
     std::vector<fastjet::PseudoJet> jtJetSplits = {};
     std::vector<fastjet::PseudoJet> refJetSplits = {};
 
-    bool jt_isClosestToTruth_latekt[MAXJETS] = {0};
-    bool ref_isClosestToReco_latekt[MAXJETS] = {0};
-    float jt_ref_dR_latekt[MAXJETS] = {0};
     bool jt_isClosestToTruth_SD[MAXJETS] = {0};
     bool ref_isClosestToReco_SD[MAXJETS] = {0};
     float jt_ref_dR_SD[MAXJETS] = {0};
 
+    bool jt_isClosestToTruth_latekt[MAXJETS] = {0};
+    bool ref_isClosestToReco_latekt[MAXJETS] = {0};
+    float jt_ref_dR_latekt[MAXJETS] = {0};
     
-    /*    float jtdyn_var[MAXJETS]={0};
-    int jtdyn_split[MAXJETS]={0};
-
-    float jtdyn_deltaR[MAXJETS]={0};
-    float jtdyn_kt[MAXJETS]={0};
-    float jtdyn_z[MAXJETS]={0};
-    int jt_intjet_multi[MAXJETS]={0};
-    float jt_girth[MAXJETS]={0};
-
-    float refdyn_var[MAXJETS]={0};
-    // float refdyn_theta[MAXJETS];
-    float refdyn_deltaR[MAXJETS]={0};
-    float refdyn_kt[MAXJETS]={0};
-    float refdyn_z[MAXJETS]={0};
-    int ref_intjet_multi[MAXJETS]={0};
-    float ref_girth[MAXJETS]={0};
-
-    
-    bool jtdyn_isClosestToTruth[MAXJETS]={0};
-    bool refdyn_isClosestToReco[MAXJETS]={0};
-    float jtdyn_refdyn_dR[MAXJETS]={0}; */
-
-    /*    std::vector<std::vector<float>> jtSubJetPt;
-	  std::vector<std::vector<float>> jtSubJetEta;
-    std::vector<std::vector<float>> jtSubJetPhi;
-    std::vector<std::vector<float>> jtSubJetM; */
     std::vector<fastjet::PseudoJet> jtJetConstituent = {};
-    // std::vector<std::vector<float>> jtJetConstituentPhi;
-    // std::vector<int> jtJetConstituentHardestSplitN;
     std::vector<fastjet::PseudoJet> refJetConstituent = {};
-    // std::vector<std::vector<float>> refJetConstituentPhi;
-    // std::vector<int> refJetConstituentHardestSplitN;
 
-    float refsub11[MAXJETS]={0};
-    float refsub12[MAXJETS]={0};
-    float refsub21[MAXJETS]={0};
-    float refsub22[MAXJETS]={0};
-    
-    
+   
     float jtmB[MAXJETS]={0};
     float jtBpt[MAXJETS]={0};
     float jtBntracks[MAXJETS]={0};
@@ -481,6 +446,7 @@ private:
     int trkMatchSta[MAXTRACKS]={0};
 
     float massHF[MAXJETS]={0};
+    float massHFgen[MAXJETS]={0};
     std::vector<std::vector<float>> massCand = {};
 
     ///
@@ -505,6 +471,20 @@ private:
     float refm[MAXJETS] = {0};
     float refarea[MAXJETS] = {0};
     float refy[MAXJETS] = {0};
+
+    ///////// SUBSTR
+    float ref_z_SD[MAXJETS] = {0};
+    float ref_rg_SD[MAXJETS] = {0};
+    float ref_ktg_SD[MAXJETS] = {0};
+    int ref_split_SD[MAXJETS] = {0};
+    bool ref_hasHF_SD[MAXJETS] = {0};
+
+    float ref_z_latekt[MAXJETS] = {0};
+    float ref_rg_latekt[MAXJETS] = {0};
+    float ref_ktg_latekt[MAXJETS] = {0};
+    int ref_split_latekt[MAXJETS] = {0};
+    bool ref_hasHF_latekt[MAXJETS] = {0};
+
     float reftau1[MAXJETS] = {0};
     float reftau2[MAXJETS] = {0};
     float reftau3[MAXJETS] = {0};
