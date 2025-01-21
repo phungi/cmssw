@@ -306,7 +306,9 @@ void HiInclusiveJetAnalyzer::beginJob() {
       t->Branch("mjtPartonFlavor", jets_.mjtPartonFlavor, "mjtPartonFlavor[nref]/I");
       t->Branch("mjtNbHad", jets_.mjtNbHad, "mjtNbHad[nref]/I");
       t->Branch("mjtNcHad", jets_.mjtNcHad, "mjtNcHad[nref]/I");
-    }
+      t->Branch("mjtNbPar", jets_.mjtNbPar, "mjtNbPar[nref]/I");
+      t->Branch("mjtNcPar", jets_.mjtNcPar, "mjtNcPar[nref]/I");
+}
   }
 
   // b-jet discriminators
@@ -914,6 +916,18 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 		jets_.mjtNbHad[jets_.nref] = bHadronsInJet.size();
 		jets_.mjtNcHad[jets_.nref] = cHadronsInJet.size();
 
+		const GenParticleRefVector &partonsInJet = jetInfo.getPartons();
+
+		int nb = 0, nc = 0;
+		for (GenParticleRefVector::const_iterator it = partonsInJet.begin(); it != partonsInJet.end(); ++it) {
+		  int parFlav = (*it)->pdgId();
+		  if (abs(parFlav)==5) nb++;
+		  if (abs(parFlav)==4) nc++;
+		}
+
+		jets_.mjtNbPar[jets_.nref] = nb;
+		jets_.mjtNcPar[jets_.nref] = nc;
+		
 		break;
 	      }
 	    } // end loop over flavour info

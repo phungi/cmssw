@@ -371,6 +371,8 @@ private:
     int mjtPartonFlavor[MAXJETS] = {0};
     int mjtNbHad[MAXJETS]={0};
     int mjtNcHad[MAXJETS]={0};
+    int mjtNbPar[MAXJETS]={0};
+    int mjtNcPar[MAXJETS]={0};
 
     float discr_csvV2[MAXJETS] = {0};
     float discr_deepCSV[MAXJETS] = {0};
