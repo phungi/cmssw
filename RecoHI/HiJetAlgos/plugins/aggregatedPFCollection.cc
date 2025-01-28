@@ -286,22 +286,9 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                     if (constit->pt() < ptCut_) continue;
 
                     // Look for particle in ipTracks
-                    //auto itIPTrack = std::find(ipTracks.begin(), ipTracks.end(), constit);
-                    //if (itIPTrack == ipTracks.end()) continue;
-
-                    reco::CandidatePtr itIPTrack;
-                    int trkIPIndex = -1;
-                    for (auto iterIPTrack : ipTracks) { 
-                        float eps = 1e-5;
-			trkIPIndex++;
-                        if (std::abs(constit->eta()-iterIPTrack->eta())>eps) continue;
-                        else if (std::abs(constit->phi()-iterIPTrack->phi())>eps) continue;
-                        else if (std::abs(constit->pt()-iterIPTrack->pt())>eps) continue;
-                        itIPTrack = iterIPTrack;
-                    }
-
-                    if (!(itIPTrack)) continue; 
-
+                    auto itIPTrack = std::find(ipTracks.begin(), ipTracks.end(), constit);
+                    if (itIPTrack == ipTracks.end()) continue;
+		    
                     // For track inefficiency uncertainty 
                     const double range_from = 0;
                     const double range_to = 1;
@@ -329,10 +316,11 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                     }
                     else {
                         // Initialize values 
-                        const double missing_value = -1000000.;
+              	      const double missing_value = -9999;//-1000000.;
 
                         float ip3dSig = missing_value;
                         float ip2dSig = missing_value;
+			float trkdz = missing_value;
                         float distanceToJetAxis = missing_value;
 			//                        bool isLepton = false;
                         bool inSV = false;
@@ -342,13 +330,14 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                         float svtxm = missing_value;
                         float svtxmcorr = missing_value;
                         float svtxNtrk = missing_value;
-                        float svtxnormchi2 = missing_value;
-                        float svtxTrkPtOverSv = missing_value;
+                        float svtxchi2 = missing_value;
+                        float svtxTrkPt = missing_value;
+			//			float svtxTrkPtOverSv = missing_value;
 
                         float jtpt = jet.pt();
                         
                         // Get IP info 
-                        //int trkIPIndex = itIPTrack - ipTracks.begin();
+                        int trkIPIndex = itIPTrack - ipTracks.begin();
                         const reco::btag::TrackIPData trkIPdata = ipData[trkIPIndex];
                         ip3dSig = trkIPdata.ip3d.significance();
                         ip2dSig = trkIPdata.ip2d.significance();
@@ -356,28 +345,29 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
 			//                        int pdg = constit->pdgId();
                         // isLepton = (std::abs(pdg) == 11) || (std::abs(pdg) == 13);
 
+			 const reco::Track *constitTrack = constit->bestTrack();
+			 if (constitTrack) {
+			   //			   std::cout << "track exists " << std::endl;
+			   //			   std::cout << "testTrack dz " << testTrack->dz() << std::endl;
+			   //			   trkdz = constitTrack->dz(primaryVertices->at(0).position()); // TODO: PV info!
+			 } else {
+			   trkdz = missing_value;
+			 }
+	  
+			
                         // if nan go back to missing_value
                         if (ip3dSig != ip3dSig) ip3dSig = missing_value;
                         if (ip2dSig != ip2dSig) ip2dSig = missing_value;
                         if (distanceToJetAxis != distanceToJetAxis) distanceToJetAxis = missing_value;
-
+			if (trkdz != trkdz) trkdz = missing_value;
+			
                         // Get SV info
             
                         for (uint ivtx = 0; ivtx < svTagInfo->nVertices(); ivtx++) {
                             std::vector<edm::Ptr<reco::Candidate>> isvTracks = svTagInfo->vertexTracks(ivtx);
-                            //auto itSVTrack = std::find(isvTracks.begin(), isvTracks.end(), constit);
-                            //if (itSVTrack == isvTracks.end()) continue;
-                            reco::CandidatePtr itSVTrack;
-                            for (auto iterSVTrack : isvTracks) {
-                                float eps = 1e-5;
-                                if (std::abs(constit->eta()-iterSVTrack->eta())>eps) continue;
-                                else if (std::abs(constit->phi()-iterSVTrack->phi())>eps) continue;
-                                else if (std::abs(constit->pt()-iterSVTrack->pt())>eps) continue;
-                                itSVTrack = iterSVTrack;
-                            }
-
-                            if (!(itSVTrack)) continue; 
-
+                            auto itSVTrack = std::find(isvTracks.begin(), isvTracks.end(), constit);
+                            if (itSVTrack == isvTracks.end()) continue;
+                            
                             inSV = true;
 
                             svtxNtrk = (float) svTagInfo->nVertexTracks(ivtx);
@@ -392,16 +382,17 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                             svtxm = svtx.p4().mass();
 
                             double svtxpt = svtx.p4().pt();
-                            svtxTrkPtOverSv = constit->pt() / svtxpt;
+                            svtxTrkPt = svtxpt;
+			    //			    svtxTrkPtOverSv = constit->pt() / svtxpt;
         
                             double sinth = svtx.p4().Vect().Unit().Cross((svTagInfo->flightDirection(ivtx)).unit()).Mag2();
                             sinth = sqrt(sinth);
                             double underRoot = std::pow(svtxm, 2) + (std::pow(svtxpt, 2) * std::pow(sinth, 2));
                             svtxmcorr = std::sqrt(underRoot) + (svtxpt * sinth);
 
-                            svtxnormchi2 = svtx.vertexNormalizedChi2();
-                            svtxTrkPtOverSv = constit->pt() / svtxpt;
-
+			    //                            svtxnormchi2 = svtx.vertexNormalizedChi2();
+			    svtxchi2 = svtx.vertexChi2();
+			    
                             break;
                         } // end vtx loop
 
@@ -416,14 +407,16 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                             inputs["trkIp3dSig"] = ip3dSig;
                             inputs["trkIp2dSig"] = ip2dSig;
                             inputs["trkDistToAxis"] = distanceToJetAxis;
+			    inputs["trkDz"] = trkdz; // TODO: check
                             inputs["svtxdls"] = svtxdls;
                             inputs["svtxdls2d"] = svtxdls2d;
                             inputs["svtxm"] = svtxm;
                             inputs["svtxmcorr"] = svtxmcorr;
-                            inputs["svtxnormchi2"] = svtxnormchi2;
+                            inputs["svtxchi2"] = svtxchi2;
                             inputs["svtxNtrk"] = svtxNtrk;
-                            inputs["svtxTrkPtOverSv"] = svtxTrkPtOverSv;
-                            inputs["jtpt"] = jtpt;
+                            inputs["svtxpt"] = svtxTrkPt;
+                            inputs["jtpt"] = jtpt; // TODO: check
+			    inputs["hiBin"] = 0; // TODO: check
 
                             float prediction = -99.;
 
@@ -536,7 +529,7 @@ void aggregatedPFCollection::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<bool>("aggregateWithTruthInfo", true);
   desc.add<bool>("aggregateWithCuts", false);
   desc.add<bool>("aggregateWithTMVA", false);
-  //desc.add<edm::FileInPath>("tmva_path", edm::FileInPath("RecoHI/HiJetAlgos/data/dummy.weights.xml"));
+  desc.add<edm::FileInPath>("tmva_path", edm::FileInPath("RecoHI/HiJetAlgos/data/TMVAClassification_BDTG.weights.xml"));
   //  desc.add<edm::FileInPath>("tmva_path", edm::FileInPath(""));
 
   desc.add<std::vector<std::string>>("tmva_variables", {});

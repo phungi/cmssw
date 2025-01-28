@@ -181,10 +181,12 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.aggregatedPFCands.jetSrc =  "patJetsAK"+labelR+"PFUnsubJets"
     process.aggregatedPFCands.constitSrc = "packedPFCandidates"
     process.aggregatedPFCands.doGenJets = False
-    process.aggregatedPFCands.aggregateWithTruthInfo = True
+    process.aggregatedPFCands.aggregateWithTruthInfo = False
     process.aggregatedPFCands.aggregateWithCuts = False
-    process.aggregatedPFCands.aggregateWithTMVA = False
-
+    process.aggregatedPFCands.aggregateWithTMVA = True
+    process.aggregatedPFCands.tmva_path = "RecoHI/HiJetAlgos/data/TMVAClassification_BDTG.weights.xml"
+    process.aggregatedPFCands.tmva_variables =  ["trkIp3dSig", "trkIp2dSig", "trkDistToAxis", "trkDz", "svtxdls", "svtxdls2d", "svtxm", "svtxmcorr", "svtxchi2", "svtxNtrk", "svtxpt", "jtpt", "hiBin"]
+    process.aggregatedPFCands.tmva_spectators = ["trkPt", "svtxnormchi2"]
     process.aggregatedPFCands.candToGenParticleMap = ["TrackToGenParticleMapProducer", "trackToGenParticleMap"]
     process.aggregatedPFCands.ipTagInfoLabel = "pfImpactParameter"
     process.aggregatedPFCands.svTagInfoLabel = "pfInclusiveSecondaryVertexFinder"

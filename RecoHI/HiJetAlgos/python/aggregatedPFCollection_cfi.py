@@ -15,7 +15,7 @@ aggregatedPFCands = cms.EDProducer('aggregatedPFCands',
                                     aggregateWithTMVA = cms.bool(False),
                                     ipTagInfoLabel = cms.string("pfImpactParameter"),
                                     svTagInfoLabel = cms.string("pfInclusiveSecondaryVertexFinder"),
-#                                    tmva_path = cms.FileInPath("RecoHI/HiJetAlgos/data/TMVAClassification_BDTG.weights.xml"),
+                                    tmva_path = cms.FileInPath("RecoHI/HiJetAlgos/data/TMVAClassification_BDTG.weights.xml"),
                                     tmva_variables = cms.vstring("trkIp3dSig", "trkIp2dSig", "trkDistToAxis", "svtxdls", "svtxdls2d", "svtxm", "svtxmcorr", "svtxnormchi2", "svtxNtrk", "svtxTrkPtOverSv", "jtpt"),
                                     tmva_spectators = cms.vstring(),
 
