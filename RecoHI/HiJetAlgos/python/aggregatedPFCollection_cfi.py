@@ -3,6 +3,7 @@ import FWCore.ParameterSet.Config as cms
 aggregatedPFCands = cms.EDProducer('aggregatedPFCands',
                                     jetSrc = cms.InputTag('updatedPatJets'),
                                     constitSrc = cms.InputTag('packedPFCandidates'),
+                                    CentralityBinSrc = cms.InputTag("centralityBin","HFtowers"),
                                     candToGenParticleMap = cms.InputTag("TrackToGenParticleMapProducer", "trackToGenParticleMap"),
                                     isMC = cms.bool(True),
                                     chargedOnly = cms.bool(False),
