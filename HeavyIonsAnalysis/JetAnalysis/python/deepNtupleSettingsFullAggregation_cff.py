@@ -168,6 +168,27 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
 
     process.patAlgosToolsTask.add(getattr(process,"ak"+labelR+"PFUnsubJets"))
 
+        
+    # Create HIN subtracted reco jets that are given to aggregation
+    from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
+    addJetCollection(
+        process,
+        postfix            = "NotAggrJets",
+        labelName          = "AKCs"+labelR+"PF",
+        jetSource          = cms.InputTag("akCs"+labelR+"PFNotAggrJets"),
+        algo               = "ak", #name of algo must be in this format
+        rParam             = jetR,
+        pvSource           = cms.InputTag("offlineSlimmedPrimaryVertices"),
+        pfCandidates       = cms.InputTag("packedPFCandidates"),
+        svSource           = svSource,
+        muSource           = cms.InputTag("slimmedMuons"),
+        elSource           = cms.InputTag("slimmedElectrons"),
+        getJetMCFlavour    = isMC,
+        genJetCollection   = cms.InputTag(matchedGenJets),
+        genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
+        jetCorrections     = jetCorrectionsAK4,
+    )
+    getattr(process,"patJetsAKCs"+labelR+"PFNotAggrJets").embedPFCandidates = True
 
     #### Aggregation 
     process.load("RecoHI.HiJetAlgos.TrackToGenParticleMapProducer_cfi")
@@ -178,10 +199,11 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
 
     process.load("RecoHI.HiJetAlgos.aggregatedPFCollection_cfi")
     process.aggregatedPFCands.aggregateHF = True
-    process.aggregatedPFCands.jetSrc =  "patJetsAK"+labelR+"PFUnsubJets"
+    process.aggregatedPFCands.jetSrc =  "patJetsAKCs"+labelR+"PFNotAggrJets"
     process.aggregatedPFCands.constitSrc = "packedPFCandidates"
     process.aggregatedPFCands.doGenJets = False
-    process.aggregatedPFCands.domatch = False
+    process.aggregatedPFCands.domatch = True
+    process.aggregatedPFCands.matchTag = 'patJetsAK'+labelR+'PFUnsubJets'
     process.aggregatedPFCands.aggregateWithTruthInfo = False
     process.aggregatedPFCands.aggregateWithCuts = False
     process.aggregatedPFCands.aggregateWithTMVA = True
@@ -196,7 +218,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         chargedOnly = cms.bool(False),
         aggregateHF = cms.bool(True),
         jetSrc = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets"),
-#        constitSrc = cms.InputTag("packedGenParticles"),  # TODO: verify
+#        constitSrc = cms.InputTag("packedGenParticles"),  # TODO: verify?
 #        constitSrc = cms.InputTag("packedGenParticlesSignal"),
         constitSrc = cms.InputTag("hiSignalGenParticles"),
         doGenJets = cms.bool(True),
@@ -209,9 +231,9 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.patAlgosToolsTask.add(getattr(process,"aggregatedPFCands"))
     process.patAlgosToolsTask.add(getattr(process,"aggregatedGenLevel"))
 
-    
-    # Create HIN subtracted reco jets
-    from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
+
+    # Create HIN subtracted reco jets from aggregated collection
+#    from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
     addJetCollection(
         process,
         postfix            = "",
@@ -225,16 +247,14 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         muSource           = cms.InputTag("slimmedMuons"),
         elSource           = cms.InputTag("slimmedElectrons"),
         getJetMCFlavour    = isMC,
-#        genJetCollection   = cms.InputTag(matchedGenJets),
         genJetCollection   = cms.InputTag("ak"+labelR+"aggregatedGenJetsWithNu" if runAggregation else matchedGenJets),
         genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
-#        genParticles       = cms.InputTag("aggregatedGenLevel" if isMC else ""),
         jetCorrections     = jetCorrectionsAK4,
     )
     getattr(process,"patJetsAKCs"+labelR+"PF").embedPFCandidates = True
 
     if not isMC:
-        for label in ["patJetsAK"+labelR+"PFUnsubJets", "patJetsAKCs"+labelR+"PF"]:
+        for label in ["patJetsAK"+labelR+"PFUnsubJets", "patJetsAKCs"+labelR+"PF", "patJetsAKCs"+labelR+"PFNotAggrJets"]:
             getattr(process, label).addGenJetMatch = False
             getattr(process, label).addGenPartonMatch = False
             getattr(process, label).embedGenJetMatch = False
@@ -249,6 +269,13 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         src = 'PackedPFTowers'
     )
     from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import akCs4PFJets
+    setattr(process,"akCs"+labelR+"PFNotAggrJets",
+            akCs4PFJets.clone(
+                src = 'packedPFCandidates',
+                jetPtMin = jetPtMin,
+                rParam = jetR
+            )
+    )
     setattr(process,"akCs"+labelR+"PFJets",
             akCs4PFJets.clone(
                 src = 'aggregatedPFCands' if runAggregation else 'packedPFCandidates',
@@ -256,7 +283,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                 rParam = jetR
             )
     )
-    for mod in ["PackedPFTowers", "hiPuRho", "akCs"+labelR+"PFJets"]:
+    for mod in ["PackedPFTowers", "hiPuRho", "akCs"+labelR+"PFJets", "akCs"+labelR+"PFNotAggrJets"]:
         process.patAlgosToolsTask.add(getattr(process, mod))
 
     # Create b-tagging sequence ----------------
@@ -282,8 +309,9 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                                                             source = cms.InputTag("updatedPatJetsDeepFlavour"),
                                                             matched = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets")
     )
+
     process.patAlgosToolsTask.add(process.unsubUpdatedPatJetsDeepFlavour)
-    
+
     if doBtagging:
 
         process.pfUnifiedParticleTransformerAK4JetTagsDeepFlavour.model_path = 'RecoBTag/Combined/data/UParTAK4/HIN/V00/UParTAK4_PbPb_2023.onnx'

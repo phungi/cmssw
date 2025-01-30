@@ -2,6 +2,8 @@ import FWCore.ParameterSet.Config as cms
 
 aggregatedPFCands = cms.EDProducer('aggregatedPFCands',
                                     jetSrc = cms.InputTag('updatedPatJets'),
+                                    matchTag = cms.InputTag('updatedPatJets'),
+                                    domatch = cms.bool(False), 
                                     constitSrc = cms.InputTag('packedPFCandidates'),
                                     CentralityBinSrc = cms.InputTag("centralityBin","HFtowers"),
                                     candToGenParticleMap = cms.InputTag("TrackToGenParticleMapProducer", "trackToGenParticleMap"),
