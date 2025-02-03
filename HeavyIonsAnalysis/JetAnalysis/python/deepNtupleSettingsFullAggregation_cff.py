@@ -199,6 +199,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
 
     process.load("RecoHI.HiJetAlgos.aggregatedPFCollection_cfi")
     process.aggregatedPFCands.aggregateHF = True
+    process.aggregatedPFCands.isMC =  isMC
     process.aggregatedPFCands.jetSrc =  "patJetsAKCs"+labelR+"PFNotAggrJets"
     process.aggregatedPFCands.constitSrc = "packedPFCandidates"
     process.aggregatedPFCands.doGenJets = False
@@ -229,7 +230,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     )
 
     process.patAlgosToolsTask.add(getattr(process,"aggregatedPFCands"))
-    process.patAlgosToolsTask.add(getattr(process,"aggregatedGenLevel"))
+    if isMC: process.patAlgosToolsTask.add(getattr(process,"aggregatedGenLevel"))
 
 
     # Create HIN subtracted reco jets from aggregated collection
