@@ -81,8 +81,9 @@ private:
   bool domatch_;
   
   double rParam_;
-  double ptCut_;
+  double ptCut_; // For tracks in aggregation
   double trkInefRate_; // 0 by default
+  double jetPtCut_;// skip low pT jets
 
   bool aggregateHF_;
   bool withTruthInfo_;
@@ -104,6 +105,7 @@ aggregatedPFCollection::aggregatedPFCollection(const edm::ParameterSet& iConfig)
     domatch_ = iConfig.getParameter<bool>("domatch");
   
     ptCut_ = iConfig.getParameter<double>("ptCut");
+    jetPtCut_ = iConfig.getParameter<double>("jetPtCut");
     trkInefRate_ = iConfig.getParameter<double>("trkInefRate");
 
     if (aggregateHF_) {
@@ -156,7 +158,7 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
 
     auto newPFCandCollection = std::make_unique<reco::PFCandidateCollection>();
 
-    auto newPFCandCollectionHF = std::make_unique<reco::PFCandidateCollection>();
+    //    auto newPFCandCollectionHF = std::make_unique<reco::PFCandidateCollection>();
 
     edm::Handle<pat::JetCollection> jets;
     iEvent.getByToken(jetSrc_, jets);    
@@ -180,13 +182,14 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
     iEvent.getByToken(primaryVerticesToken_, primaryVertices);
 
     std::vector<fastjet::PseudoJet> jetConstituents = {};
-    reco::PFCandidate pseudoHF;
 
     // std::cout << "Matched jets: " << matchedjets->size() << std::endl; // debug
 
     for(unsigned int j = 0; j < jets->size(); ++j){
 
         const pat::Jet& jet = (*jets)[j];
+
+	if ( jet.pt() < jetPtCut_ ) continue;
 
         if (aggregateHF_) {
 	  
@@ -207,14 +210,12 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                 // Go over gen particles
 
                 if (genJet) {
+		  //		  std::cout << "Gen pt: " << genJet->pt() << std::endl;
                     for (const edm::Ptr<reco::Candidate> &constit : (*genJet).getJetConstituents()) {
    
-                        if(chargedOnly_ && constit->charge() == 0) continue;
-                        if(constit->pt() < ptCut_) continue;
+		        if(chargedOnly_ && constit->charge() == 0) continue;
 
-                        //std::cout << "---- Got gen level constit with charge " <<  constit->charge() << std::endl;
- 
-                        bool isNeutrino = (constit->pdgId() == 12); // nue
+		        bool isNeutrino = (constit->pdgId() == 12); // nue
                         isNeutrino &= (constit->pdgId() == 14); // numu
                         isNeutrino &= (constit->pdgId() == 16); // nutau
                         isNeutrino &= (constit->pdgId() == 18); // nutau'
@@ -223,6 +224,19 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                             continue;
                         }
 
+			if (constit->charge() == 0 or constit->pt() < ptCut_) {   // Neutrals and low pT tracks are not used in aggregation, let's fill them directly in the collection
+			  reco::PFCandidate constituentsPF;
+			  constituentsPF.setCharge(constit->charge());
+			  constituentsPF.setP4(constit->p4());
+			  constituentsPF.setPdgId(constit->pdgId());
+			  constituentsNoHF.push_back(constituentsPF);
+			  newPFCandCollection->push_back(constituentsPF);
+			  //			  std::cout << "Filling a gen const with ch " << constit->charge() << " " << constit->pt() <<" id: " << constit->pdgId() << std::endl;
+			  continue;
+			}
+
+                        //std::cout << "---- Got gen level constit with charge " <<  constit->charge() << std::endl;
+ 
                         // Get status of matched gen particle
                         int status = 1;
                         if ((*candToGenParticleMap).find(constit) != (*candToGenParticleMap).end()) {
@@ -249,14 +263,14 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
 
                     // Aggregate particles coming from HF decays into pseudo-B/D's and add them to the collection
                     for (auto it = hfConstituentsMap.begin(); it != hfConstituentsMap.end(); ++it) {
-                        reco::Candidate::PolarLorentzVector pseudoHF(0., 0., 0., 0.);
+		      //                        reco::Candidate::PolarLorentzVector pseudoHF(0., 0., 0., 0.);
                         for (edm::Ptr<reco::Candidate> hfConstituent : it->second) {
                             reco::Candidate::PolarLorentzVector productLorentzVector(0., 0., 0., 0.);
                             productLorentzVector.SetPt(hfConstituent->pt());
                             productLorentzVector.SetEta(hfConstituent->eta());
                             productLorentzVector.SetPhi(hfConstituent->phi());
                             productLorentzVector.SetM(hfConstituent->mass());
-                            pseudoHF += productLorentzVector;
+			    //     pseudoHF += productLorentzVector;
                             totalPseudoHF += productLorentzVector;                           
                             reco::PFCandidate daughter;
                             daughter.setP4(productLorentzVector);
@@ -272,8 +286,9 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                         outputPseudoHF.setMass(totalPseudoHF.mass()*-1);
      
                         newPFCandCollection->push_back(outputPseudoHF);
-                        newPFCandCollectionHF->insert(newPFCandCollectionHF->end(), constituentsNoHF.begin(), constituentsNoHF.end());
-                        newPFCandCollectionHF->push_back(outputPseudoHF);
+			//			std::cout << "Filling a gen aggregatedB with pt " << outputPseudoHF.pt() << std::endl;
+			//                        newPFCandCollectionHF->insert(newPFCandCollectionHF->end(), constituentsNoHF.begin(), constituentsNoHF.end());
+			//                        newPFCandCollectionHF->push_back(outputPseudoHF);
                     }
                 }
             }
@@ -300,9 +315,9 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                 reco::TrackToGenParticleMap recoMap = isMC_ ? *candToGenParticleMap : reco::TrackToGenParticleMap();	        
 		//		const pat::Jet& mjet = (*matchedjets)[matchIndex];
 		const pat::Jet& mjet = (domatch_ ? (*matchedjets)[matchIndex] : jet);
-		
+		//		std::cout << "Test jet pT:s " << mjet.pt() << " " << jet.pt() << std::endl;
                 std::vector<edm::Ptr<reco::Candidate>> inputJetConstituents = jet.getJetConstituents();
-                std::vector<reco::PFCandidate> droppedTracks = {};
+		//                std::vector<reco::PFCandidate> droppedTracks = {};
                 reco::PFCandidate outputPseudoHF;
                 std::vector<reco::PFCandidate> constituentsNoHF;
 
@@ -319,8 +334,6 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                 std::cout << "HAS IPtag " << ipTagInfoLabel_.c_str() << " " << mjet.hasTagInfo(ipTagInfoLabel_.c_str()) << std::endl;
                 std::cout << "HAS svtag " << svTagInfoLabel_.c_str() << " " << mjet.hasTagInfo(svTagInfoLabel_.c_str()) << std::endl; */
 
-
-
                 const reco::CandIPTagInfo *ipTagInfo = mjet.tagInfoCandIP(ipTagInfoLabel_.c_str());
                 const std::vector<reco::btag::TrackIPData> ipData = ipTagInfo->impactParameterData();
                 const std::vector<edm::Ptr<reco::Candidate>> ipTracks = ipTagInfo->selectedTracks();
@@ -329,15 +342,33 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
 
                 for (const edm::Ptr<reco::Candidate> &constit : mjet.getJetConstituents()) {
                     //std::cout << "constit loop" << std::endl;
-                    if (chargedOnly_ && constit->charge() == 0) continue;
-                    if (constit->pt() < ptCut_) continue;
-
+		  if (chargedOnly_ && constit->charge() == 0) continue;
+		  if (constit->charge() == 0 or constit->pt() < ptCut_) {   // Neutrals and low pT tracks are not used in aggregation, let's fill them directly in the collection
+		    reco::PFCandidate constituentsPF;
+		    constituentsPF.setCharge(constit->charge());
+		    constituentsPF.setP4(constit->p4());
+		    constituentsPF.setPdgId(constit->pdgId());
+		    constituentsNoHF.push_back(constituentsPF);
+		    newPFCandCollection->push_back(constituentsPF);
+		    // std::cout << "Filling a const with ch " << constit->charge() << " " << constit->pt() << std::endl;
+		    continue;
+		  }
+		  
                     // Look for particle in ipTracks
                     auto itIPTrack = std::find(ipTracks.begin(), ipTracks.end(), constit);
-                    if (itIPTrack == ipTracks.end()) continue;
+                    if (itIPTrack == ipTracks.end()) {
+		      // std::cout << "Didn't find a track in ipTrack list: " << constit->charge() << " " << constit->pt() << std::endl;
+		      reco::PFCandidate constituentsPF;
+		      constituentsPF.setCharge(constit->charge());
+		      constituentsPF.setP4(constit->p4());
+		      constituentsPF.setPdgId(constit->pdgId());
+		      constituentsNoHF.push_back(constituentsPF);
+		      newPFCandCollection->push_back(constituentsPF);
+		      continue;
+		    }
 		    
                     // For track inefficiency uncertainty 
-                    const double range_from = 0;
+                    /* const double range_from = 0;
                     const double range_to = 1;
                     std::random_device rand_dev;
                     std::mt19937 generator(rand_dev());
@@ -350,7 +381,7 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                         droppedTrack.setPdgId(constit->pdgId());
                         droppedTracks.push_back(droppedTrack);
                         continue;
-                    }
+                    } */
 
                     int status = 1;
 
@@ -363,7 +394,7 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                     }
                     else {
                         // Initialize values 
-                        const double missing_value = -9999;//-1000000.;
+                        const double missing_value = -9999;
                         float ip3dSig = missing_value;
                         float ip2dSig = missing_value;
                         float trkdz = missing_value;
@@ -480,26 +511,26 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                         constituentsPF.setCharge(constit->charge());
                         constituentsPF.setP4(constit->p4());
                         constituentsPF.setPdgId(constit->pdgId());
-                        constituentsNoHF.push_back(constituentsPF);
+			//                        constituentsNoHF.push_back(constituentsPF);
                         newPFCandCollection->push_back(constituentsPF);
                     }
                     else if (status >= 100) {
                         hfConstituentsMap[status].push_back(constit);
-                        // std::cout << "HF Constit pt: " << constit->pt() << std::endl;
+			//			std::cout << "HF Constit pt: " << constit->pt() << " id: " << constit->pdgId() << " mass " << constit->mass() << std::endl;
                     }
     
                 } // end jet constituents loop
    
                 // Aggregate particles coming from HF decays into pseudo-B/C's  and add them to the collection
                 for (auto itTrackFromHF = hfConstituentsMap.begin(); itTrackFromHF != hfConstituentsMap.end(); itTrackFromHF++) {
-                    reco::Candidate::PolarLorentzVector pseudoHF(0., 0., 0., 0.);
+		  //                    reco::Candidate::PolarLorentzVector pseudoHF(0., 0., 0., 0.);
                     for (edm::Ptr<reco::Candidate> hfConstituent : itTrackFromHF->second) {
                         reco::Candidate::PolarLorentzVector productLorentzVector(0., 0., 0., 0.);
                         productLorentzVector.SetPt(hfConstituent->pt());
                         productLorentzVector.SetEta(hfConstituent->eta());
                         productLorentzVector.SetPhi(hfConstituent->phi());
                         productLorentzVector.SetM(hfConstituent->mass());
-                        pseudoHF += productLorentzVector;
+			//      pseudoHF += productLorentzVector;
                         totalPseudoHF += productLorentzVector;
 
                         reco::PFCandidate daughter;
@@ -516,9 +547,11 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
                     outputPseudoHF.setMass(totalPseudoHF.mass()*(-1));
  
                     newPFCandCollection->push_back(outputPseudoHF);
-                    newPFCandCollectionHF->insert(newPFCandCollectionHF->end(), constituentsNoHF.begin(), constituentsNoHF.end());
-                    newPFCandCollectionHF->push_back(outputPseudoHF);
-                }
+
+		}
+		//  newPFCandCollectionHF->insert(newPFCandCollectionHF->end(), constituentsNoHF.begin(), constituentsNoHF.end());
+                //    newPFCandCollectionHF->push_back(outputPseudoHF);
+		    // }
             } 
         }
 
@@ -543,8 +576,8 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
 
     } // end jet loop
 
-    iEvent.put(std::move(newPFCandCollectionHF));
-    //iEvent.put(std::move(newPFCandCollection));
+    //iEvent.put(std::move(newPFCandCollectionHF));
+    iEvent.put(std::move(newPFCandCollection));
   
 }
 
@@ -566,6 +599,7 @@ void aggregatedPFCollection::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<bool>("chargedOnly", false);
   
   desc.add<double>("ptCut", 1.);
+  desc.add<double>("jetPtCut", 50.);
   desc.add<double>("trkInefRate", 0.);
 
   desc.add<bool>("doGenJets", false);

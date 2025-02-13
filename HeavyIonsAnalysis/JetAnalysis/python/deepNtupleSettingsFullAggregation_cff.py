@@ -58,6 +58,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         process.allPartons = allPartons.clone(
             src = 'hiSignalGenParticles'
         )
+
+        
         from RecoJets.JetProducers.ak4GenJets_cfi import ak4GenJets
         setattr(process,"ak"+labelR+"GenJetsWithNu",
                 ak4GenJets.clone(
@@ -65,22 +67,25 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                     rParam = jetR
                 )
         )
-        setattr(process,"ak"+labelR+"aggregatedGenJetsWithNu",
-                ak4GenJets.clone(
-                    src = 'aggregatedGenLevel',
-                    rParam = jetR
-                )
-        )
+        
         process.packedGenParticlesForJetsNoNu = cms.EDFilter("CandPtrSelector",
             src = cms.InputTag("packedGenParticlesSignal"),
             cut = cms.string("abs(pdgId) != 12 && abs(pdgId) != 14 && abs(pdgId) != 16")
         )
         setattr(process,"ak"+labelR+"GenJetsRecluster",
                 ak4GenJets.clone(
-                    src = 'packedGenParticlesForJetsNoNu'
+                    src = 'packedGenParticlesForJetsNoNu',
+                    rParam = jetR
                 )
         )
-        process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"),  getattr(process,"ak"+labelR+"aggregatedGenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
+        setattr(process,"ak"+labelR+"aggregatedGenJetsNoNu",
+                ak4GenJets.clone(
+                    src = 'aggregatedGenLevel',
+                    rParam = jetR
+                )
+        )
+        process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"),  getattr(process,"ak"+labelR+"aggregatedGenJetsNoNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
+        
 
     # Remake secondary vertices
     from RecoVertex.AdaptiveVertexFinder.inclusiveVertexing_cff import inclusiveCandidateVertexFinder, candidateVertexMerger, candidateVertexArbitrator, inclusiveCandidateSecondaryVertices
@@ -140,9 +145,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     matchedGenJets = ""
     if isMC:
         if labelR == "0": matchedGenJets = "slimmedGenJets"
-        else: matchedGenJets  = "ak"+labelR+"GenJetsWithNu"
-
-        
+        else: matchedGenJets  = "ak"+labelR+"GenJetsRecluster"
+ 
     from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
     addJetCollection(
         process,
@@ -204,6 +208,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.aggregatedPFCands.constitSrc = "packedPFCandidates"
     process.aggregatedPFCands.doGenJets = False
     process.aggregatedPFCands.domatch = True
+    process.aggregatedPFCands.jetPtCut = 10
     process.aggregatedPFCands.matchTag = 'patJetsAK'+labelR+'PFUnsubJets'
     process.aggregatedPFCands.aggregateWithTruthInfo = False
     process.aggregatedPFCands.aggregateWithCuts = False
@@ -219,8 +224,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         chargedOnly = cms.bool(False),
         aggregateHF = cms.bool(True),
         jetSrc = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets"),
-#        constitSrc = cms.InputTag("packedGenParticles"),  # TODO: verify?
-#        constitSrc = cms.InputTag("packedGenParticlesSignal"),
+        jetPtCut = 10,
         constitSrc = cms.InputTag("hiSignalGenParticles"),
         doGenJets = cms.bool(True),
         aggregateWithTruthInfo = cms.bool(True),
@@ -248,7 +252,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         muSource           = cms.InputTag("slimmedMuons"),
         elSource           = cms.InputTag("slimmedElectrons"),
         getJetMCFlavour    = isMC,
-        genJetCollection   = cms.InputTag("ak"+labelR+"aggregatedGenJetsWithNu" if runAggregation else matchedGenJets),
+        genJetCollection   = cms.InputTag("ak"+labelR+"aggregatedGenJetsNoNu" if runAggregation else matchedGenJets),
         genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
         jetCorrections     = jetCorrectionsAK4,
     )
@@ -314,7 +318,6 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.patAlgosToolsTask.add(process.unsubUpdatedPatJetsDeepFlavour)
 
     if doBtagging:
-
         process.pfUnifiedParticleTransformerAK4JetTagsDeepFlavour.model_path = 'RecoBTag/Combined/data/UParTAK4/HIN/V00/UParTAK4_PbPb_2023.onnx'
         process.pfUnifiedParticleTransformerAK4TagInfosDeepFlavour.sort_cand_by_pt = True
 

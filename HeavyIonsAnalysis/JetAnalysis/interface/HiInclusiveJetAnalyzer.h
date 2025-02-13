@@ -87,6 +87,7 @@ private:
   edm::EDGetTokenT<pat::JetCollection> jetTag_;
   edm::EDGetTokenT<reco::CaloJetCollection> caloJetTag_;
   edm::EDGetTokenT<pat::JetCollection> matchTag_;
+  edm::EDGetTokenT<pat::JetCollection> originalCSTag_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandidateLabel_;
   edm::EDGetTokenT<reco::GenParticleCollection> genParticleSrc_;
   edm::EDGetTokenT<edm::View<reco::GenJet>> genjetTag_;
@@ -203,9 +204,13 @@ private:
     int lumi = 0;
     int ncalo = 0;
     int nvtx=0;
+
+    int nCSjets = 0;
     
     float rawpt[MAXJETS] = {0};
     float jtpt[MAXJETS] = {0};
+    float jtptCS[MAXJETS] = {0};
+    float jtCSdr[MAXJETS] = {0};
     float jteta[MAXJETS] = {0};
     float jtphi[MAXJETS] = {0};
 

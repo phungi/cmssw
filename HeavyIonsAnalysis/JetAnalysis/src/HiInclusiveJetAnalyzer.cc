@@ -29,6 +29,7 @@ using namespace reco;
 HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig) {
   doMatch_ = iConfig.getUntrackedParameter<bool>("matchJets", false);
   jetTag_ = consumes<pat::JetCollection>(iConfig.getParameter<InputTag>("jetTag"));
+  originalCSTag_ = consumes<pat::JetCollection>(iConfig.getParameter<InputTag>("originalCSTag"));
   caloJetTag_ = consumes<reco::CaloJetCollection>(iConfig.getParameter<InputTag>("caloJetTag"));
   matchTag_ = consumes<pat::JetCollection>(iConfig.getUntrackedParameter<InputTag>("matchTag"));
 
@@ -174,12 +175,16 @@ void HiInclusiveJetAnalyzer::beginJob() {
   t->Branch("nref", &jets_.nref, "nref/I");
   t->Branch("rawpt", jets_.rawpt, "rawpt[nref]/F");
   t->Branch("jtpt", jets_.jtpt, "jtpt[nref]/F");
+  t->Branch("jtptCS", jets_.jtptCS, "jtptCS[nref]/F");
+  t->Branch("jtCSdr", jets_.jtCSdr, "jtCSdr[nref]/F");
   t->Branch("jteta", jets_.jteta, "jteta[nref]/F");
   t->Branch("jty", jets_.jty, "jty[nref]/F");
   t->Branch("jtphi", jets_.jtphi, "jtphi[nref]/F");
   t->Branch("jtpu", jets_.jtpu, "jtpu[nref]/F");
   t->Branch("jtm", jets_.jtm, "jtm[nref]/F");
   t->Branch("jtarea", jets_.jtarea, "jtarea[nref]/F");
+
+  t->Branch("nCSjets", &jets_.nCSjets, "nCSjets/I");
 
   t->Branch("massHF", jets_.massHF, "massHF[nref]/F");
   t->Branch("massHFgen", jets_.massHFgen, "massHFgen[nref]/F");
@@ -603,6 +608,9 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
   edm::Handle<pat::JetCollection> matchedjets;
   iEvent.getByToken(matchTag_, matchedjets);
 
+  edm::Handle<pat::JetCollection> originalCSjets;
+  iEvent.getByToken(originalCSTag_, originalCSjets);
+
   if (doGenSubJets_)
     iEvent.getByToken(subjetGenTag_, gensubjets_);
   if (doGenSym_) {
@@ -694,7 +702,19 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     if(maxDR>0.4) tagValue=-999;
     return tagValue;
   };
-      
+
+  // Count original jets with pt > cut, eta < cut
+  int countoriginal = 0;
+  //  std::cout << "Check original jets " << std::endl;
+  for (unsigned int j = 0; j < originalCSjets->size(); ++j) {
+    const pat::Jet& jet = (*originalCSjets)[j];
+    if (jet.pt() < jetPtMin_) continue;
+    if (std::abs(jet.eta()) > jetAbsEtaMax_) continue;
+    //    std::cout << "original jet with pt: " << jet.pt() << endl;
+    countoriginal++; 
+  }
+  jets_.nCSjets = countoriginal;
+  
   for (unsigned int j = 0; j < jets->size(); ++j) {
     const pat::Jet& jet = (*jets)[j];
 
@@ -703,6 +723,27 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       continue;
     if (std::abs(jet.eta()) > jetAbsEtaMax_)
       continue;
+
+    bool doCSmatch = true;
+    int matchCSIndex = -1;
+    jets_.jtptCS[jets_.nref] = 0;
+    jets_.jtCSdr[jets_.nref] = 0;
+    
+    if (doCSmatch) {   // 
+      double drMin = 100;
+      for (unsigned int imatch = 0; imatch < originalCSjets->size(); ++imatch) {
+	const pat::Jet& mjet = (*originalCSjets)[imatch];
+	double dr = deltaR(jet, mjet);
+	if (dr < drMin) {
+	  drMin = dr;
+	  matchCSIndex = imatch;
+	}
+      }
+      const pat::Jet& mjet = (*originalCSjets)[matchCSIndex];
+      jets_.jtptCS[jets_.nref] = mjet.pt();
+      jets_.jtCSdr[jets_.nref] = drMin;
+    }
+    
 
     if (doCandidateBtagging_ && useNewBtaggers_) {
       for (const auto& t : jetTaggers) {
@@ -1113,6 +1154,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     jets_.jtm[jets_.nref] = jet.mass();
     jets_.jtarea[jets_.nref] = jet.jetArea();
 
+
     //recluster the jet constituents in reWTA scheme-------------------------
     if (doWTARecluster_) {
       std::vector<fastjet::PseudoJet> candidates;
@@ -1458,11 +1500,14 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     auto daughters = jet.getJetConstituents();
 
     for (auto it = daughters.begin(); it!=daughters.end(); ++it){
+      if (doChargedConstOnly_ && (**it).charge()==0) continue;
+      
       //      std::cout << "scan jet consts, mass: " << (**it).mass() << " charge: " << (**it).charge() << " id: "<< (**it).pdgId() << std::endl;
-      if ((**it).mass() < 0 and (**it).pdgId() != 22) jets_.massHF[jets_.nref] = -((**it).mass());
-     
+      if ((**it).mass() < 0 and (**it).charge() < -4) {      // Assumes charge is set in aggregator
+	jets_.massHF[jets_.nref] = -((**it).mass());
+	//	std::cout << "HF mass is " << -((**it).mass()) << std::endl;
+      }
       //if we want only charged constituents and the daughter charge is 0, skip it
-      if (doChargedConstOnly_ && (**it).charge()==0) continue; 
       
       if ((**it).pt()<1) continue; //Particle pt cut
 
