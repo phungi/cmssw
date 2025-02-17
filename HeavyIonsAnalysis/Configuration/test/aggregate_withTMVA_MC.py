@@ -229,8 +229,21 @@ if doTracks:
 if doSvtx:
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doSvtx = cms.untracked.bool(True)
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").svTagInfoLabel = cms.untracked.string("pfInclusiveSecondaryVertexFinder")
-    
+
+
+process.ak2PFXpatJets = cms.EDFilter("PatJetXSelector",
+                                     src = cms.InputTag("selectedUpdatedPatJetsDeepFlavour"),
+                                     cut = cms.string("pt > 0.0 && abs(rapidity()) < 3.")
+                                     )
+process.forest += getattr(process,"ak"+jetLabel+"PFXpatJets")
+
+#process.akCs2PFJets.writeJetsWithConst = False
+
+process.akCs2PFJetAnalyzer.jetTag = "ak2PFXpatJets"
 process.forest += getattr(process,"akCs"+jetLabel+"PFJetAnalyzer")
+
+
+
 
 
 #########################

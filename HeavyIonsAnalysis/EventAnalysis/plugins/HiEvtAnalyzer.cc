@@ -465,36 +465,41 @@ void HiEvtAnalyzer::beginJob() {
     thi_->Branch("Npart", &fNpart, "Npart/F");
     thi_->Branch("Ncoll", &fNcoll, "Ncoll/F");
     thi_->Branch("Nhard", &fNhard, "Nhard/F");
-    thi_->Branch("phi0", &fPhi0, "NPhi0/F");
+    //thi_->Branch("phi0", &fPhi0, "NPhi0/F");
     thi_->Branch("b", &fb, "b/F");
-    thi_->Branch("Ncharged", &fNcharged, "Ncharged/I");
-    thi_->Branch("NchargedMR", &fNchargedMR, "NchargedMR/I");
-    thi_->Branch("MeanPt", &fMeanPt, "MeanPt/F");
-    thi_->Branch("MeanPtMR", &fMeanPtMR, "MeanPtMR/F");
-    thi_->Branch("EtMR", &fEtMR, "EtMR/F");
-    thi_->Branch("NchargedPtCut", &fNchargedPtCut, "NchargedPtCut/I");
-    thi_->Branch("NchargedPtCutMR", &fNchargedPtCutMR, "NchargedPtCutMR/I");
+    /*
+      thi_->Branch("Ncharged", &fNcharged, "Ncharged/I");
+      thi_->Branch("NchargedMR", &fNchargedMR, "NchargedMR/I");
+      thi_->Branch("MeanPt", &fMeanPt, "MeanPt/F");
+      thi_->Branch("MeanPtMR", &fMeanPtMR, "MeanPtMR/F");
+      thi_->Branch("EtMR", &fEtMR, "EtMR/F");
+      thi_->Branch("NchargedPtCut", &fNchargedPtCut, "NchargedPtCut/I");
+      thi_->Branch("NchargedPtCutMR", &fNchargedPtCutMR, "NchargedPtCutMR/I");
+    */
   }
   if (doMC_) {
     thi_->Branch("ProcessID", &proc_id, "ProcessID/I");
     thi_->Branch("pthat", &pthat, "pthat/F");
     thi_->Branch("weight", &weight, "weight/F");
-    thi_->Branch("alphaQCD", &alphaQCD, "alphaQCD/F");
-    thi_->Branch("alphaQED", &alphaQED, "alphaQED/F");
+    //thi_->Branch("alphaQCD", &alphaQCD, "alphaQCD/F");
+    //thi_->Branch("alphaQED", &alphaQED, "alphaQED/F");
     thi_->Branch("qScale", &qScale, "qScale/F");
-    thi_->Branch("nMEPartons", &nMEPartons, "nMEPartons/I");
-    thi_->Branch("nMEPartonsFiltered", &nMEPartonsFiltered, "nMEPartonsFiltered/I");
-    thi_->Branch("pdfID", &pdfID);
-    thi_->Branch("pdfX", &pdfX);
-    thi_->Branch("pdfXpdf", &pdfXpdf);
-    thi_->Branch("ttbar_w", &ttbar_w);
-    thi_->Branch("npus", &npus);
-    thi_->Branch("tnpus", &tnpus);
+    /*
+      thi_->Branch("nMEPartons", &nMEPartons, "nMEPartons/I");
+      thi_->Branch("nMEPartonsFiltered", &nMEPartonsFiltered, "nMEPartonsFiltered/I");    
+      thi_->Branch("pdfID", &pdfID);
+      thi_->Branch("pdfX", &pdfX);
+      thi_->Branch("pdfXpdf", &pdfXpdf);
+      thi_->Branch("ttbar_w", &ttbar_w);
+      thi_->Branch("npus", &npus);
+      thi_->Branch("tnpus", &tnpus);
+    */
   }
 
   // Centrality
   thi_->Branch("hiBin", &hiBin, "hiBin/I");
   thi_->Branch("hiHF", &hiHF, "hiHF/F");
+  /*
   thi_->Branch("hiHFplus", &hiHFplus, "hiHFplus/F");
   thi_->Branch("hiHFminus", &hiHFminus, "hiHFminus/F");
   thi_->Branch("hiHFECut", &hiHFECut, "hiHFECut/F");
@@ -559,6 +564,7 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("numMinHFTower3", &numMinHFTower3, "numMinHFTower3/I");
   thi_->Branch("numMinHFTower4", &numMinHFTower4, "numMinHFTower4/I");
   thi_->Branch("numMinHFTower5", &numMinHFTower5, "numMinHFTower5/I");
+  */
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
