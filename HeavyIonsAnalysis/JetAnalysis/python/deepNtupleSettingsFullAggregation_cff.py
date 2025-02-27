@@ -208,7 +208,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.aggregatedPFCands.constitSrc = "packedPFCandidates"
     process.aggregatedPFCands.doGenJets = False
     process.aggregatedPFCands.domatch = True
-    process.aggregatedPFCands.jetPtCut = 10
+    process.aggregatedPFCands.jetPtCut = 70
     process.aggregatedPFCands.matchTag = 'patJetsAK'+labelR+'PFUnsubJets'
     process.aggregatedPFCands.aggregateWithTruthInfo = False
     process.aggregatedPFCands.aggregateWithCuts = False

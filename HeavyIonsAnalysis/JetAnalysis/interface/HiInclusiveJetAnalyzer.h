@@ -132,7 +132,6 @@ private:
   bool withTruthInfo_;
   bool withCuts_;
   bool withTMVA_;
-  bool useOnlyMatched_ = true;
   
   bool doMatch_;
   bool useVtx_;
@@ -162,6 +161,7 @@ private:
   bool doJetConstituents_;
   bool doGenSubJets_;
   bool doCaloJets_;
+  bool matchOriginal_;
 
   bool doTracks_;
   double trkPtCut_;
@@ -452,8 +452,8 @@ private:
     int trkPdgId[MAXTRACKS]={0};
     int trkMatchSta[MAXTRACKS]={0};
 
-    float massHF[MAXJETS]={0};
-    float massHFgen[MAXJETS]={0};
+    float massHF[MAXJETS]={-999};
+    float massHFgen[MAXJETS]={-999};
     std::vector<std::vector<float>> massCand = {};
 
     ///

@@ -94,14 +94,37 @@ void CSJetProducer::runAlgorithm(edm::Event& iEvent, edm::EventSetup const& iSet
   for (fastjet::PseudoJet& ijet : tempJets) {
     //----------------------------------------------------------------------
     // sift ghosts and particles in the input jet
-    std::vector<fastjet::PseudoJet> particles, ghosts, pions, bmesons;
+    std::vector<fastjet::PseudoJet> particles, ghosts, pions, bmesons, lights, bmesonstemp;
     fastjet::SelectorIsPureGhost().sift(ijet.constituents(), ghosts, particles);
     unsigned long nParticles = particles.size();
     if (nParticles == 0)
       continue;  //don't subtract ghost jets
+
+    fastjet::SelectorMassMin(0).sift(particles, pions, bmesonstemp);
+
+    // Sometimes PF candidates have a mass of -epsilon (O(-1e-7- -1e9)) - these are mostly photons
+    if(bmesonstemp.size()>0) {
+      for (unsigned long nbs=0;nbs<bmesonstemp.size();nbs++) {
+	// std::cout<<"this is the B with neg mass "<<bmesonstemp[nbs].m() << " total number of neg mass particles: " << bmesonstemp.size() << " pt: " << bmesonstemp[nbs].pt() <<std::endl;
+	if ( bmesonstemp[nbs].m() > -1e-5) lights.push_back(bmesonstemp[nbs]);
+	else bmesons.push_back(bmesonstemp[nbs]);  // change these
+      }
+    }
+
+    /* if(lights.size()>0) {
+      for (unsigned long nbs=0;nbs<lights.size();nbs++) {
+	std::cout<<"this is a light with neg mass "<<lights[nbs].m() << " total number of neg mass particles: " << lights.size() << " pt: " << lights[nbs].pt() <<std::endl;
+      }
+    }
+    if(bmesonstemp.size()>0) {
+      for (unsigned long nbs=0;nbs<bmesonstemp.size();nbs++) {
+	std::cout<<"this is a new B with neg mass "<<bmesonstemp[nbs].m() << " total number of neg mass particles: " << bmesonstemp.size() << " pt: " << bmesonstemp[nbs].pt() <<std::endl;
+      }
+      } */
+
+    // Insert lights back
+    particles.insert(particles.end(),lights.begin(),lights.end());
     
-    fastjet::SelectorMassMin(0).sift(particles, pions, bmesons);
-    //    if(bmesons.size()>0) for(unsigned long nbs=0;nbs<bmesons.size();nbs++){std::cout<<"this is the B with neg mass "<<bmesons[nbs].m()<<std::endl;}
     
     //assign rho and rhom to ghosts according to local eta-dependent map + modulation as function of phi
     for (fastjet::PseudoJet& ighost : ghosts) {

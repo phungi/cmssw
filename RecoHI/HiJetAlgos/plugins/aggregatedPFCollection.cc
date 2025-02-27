@@ -84,6 +84,7 @@ private:
   double ptCut_; // For tracks in aggregation
   double trkInefRate_; // 0 by default
   double jetPtCut_;// skip low pT jets
+  double jetEtaCut_ = 3.0;// skip forward jets
 
   bool aggregateHF_;
   bool withTruthInfo_;
@@ -190,6 +191,7 @@ void aggregatedPFCollection::produce(edm::StreamID, edm::Event& iEvent, const ed
         const pat::Jet& jet = (*jets)[j];
 
 	if ( jet.pt() < jetPtCut_ ) continue;
+	if ( jet.eta() > jetEtaCut_ ) continue;
 
         if (aggregateHF_) {
 	  
