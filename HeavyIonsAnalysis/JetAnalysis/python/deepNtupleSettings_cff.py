@@ -77,7 +77,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         )
         setattr(process,"ak"+labelR+"GenJetsRecluster",
                 ak4GenJets.clone(
-                    src = 'packedGenParticlesForJetsNoNu'
+                    src = 'packedGenParticlesForJetsNoNu',
+                    rParam = jetR
                 )
         )
         process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"),  getattr(process,"ak"+labelR+"aggregatedGenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
@@ -140,7 +141,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     matchedGenJets = ""
     if isMC:
         if labelR == "0": matchedGenJets = "slimmedGenJets"
-        else: matchedGenJets  = "ak"+labelR+"GenJetsWithNu"
+        else: matchedGenJets  = "ak"+labelR+"GenJetsRecluster"
 
         
     from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
