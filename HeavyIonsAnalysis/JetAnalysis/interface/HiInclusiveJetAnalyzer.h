@@ -71,7 +71,7 @@ private:
   edm::EDGetTokenT<reco::CaloJetCollection> caloJetTag_;
   edm::EDGetTokenT<pat::JetCollection> matchTag_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandidateLabel_;
-  edm::EDGetTokenT<reco::GenParticleCollection> genParticleSrc_;
+  edm::EDGetTokenT<reco::CandidateCollection> genParticleSrc_;
   edm::EDGetTokenT<edm::View<reco::GenJet>> genjetTag_;
   edm::EDGetTokenT<edm::HepMCProduct> eventInfoTag_;
   edm::EDGetTokenT<GenEventInfoProduct> eventGenInfoTag_;

@@ -86,8 +86,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
 
   if (isMC_)
     genParticleSrc_ =
-        consumes<reco::GenParticleCollection>(iConfig.getUntrackedParameter<edm::InputTag>("genParticles"));
-
+        consumes<reco::CandidateCollection>(iConfig.getUntrackedParameter<edm::InputTag>("genParticles"));
   if (doLegacyBtagging_) {
     trackCHEBJetTags_ = "trackCountingHighEffBJetTags";
     trackCHPBJetTags_ = "trackCountingHighPurBJetTags";
@@ -495,8 +494,8 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
   iEvent.getByToken(pfCandidateLabel_, pfCandidates);
   edm::Handle<reco::JetFlavourInfoMatchingCollection> jetFlavourInfos;
 
+  edm::Handle<reco::CandidateCollection> genparts;
   if (isMC_) {
-    edm::Handle<reco::GenParticleCollection> genparts;
     iEvent.getByToken(genParticleSrc_, genparts);
     iEvent.getByToken(jetFlavourInfosToken_, jetFlavourInfos );
   }
@@ -868,23 +867,42 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       jets_.jtPfMUM[jets_.nref] = 0;
     }
 
-    //    if(isMC_){
+    if(isMC_){
+      const reco::GenJet* genjet = jet.genJet();
+      if(genjet){
+        std::cout << "Reco jet of: " << jet.pt() << " GeV, eta=" << jet.eta() << ", phi=" << jet.phi() <<  "  matched with:" <<std::endl;
+        std::cout << "Gen  jet of: " << genjet->pt() << " GeV, eta=" << genjet->eta() << ", phi=" << genjet->phi() << std::endl; 
+      // std::cout << "Gen collection size: " << genparts->size() << std::endl;
+        for(UInt_t i = 0; i < genparts->size(); ++i){
+          const reco::Candidate& p = (*genparts)[i];
+          double dr = deltaR(*genjet,p);
+          if( dr < rParam ){
+            unsigned int nMo=p.numberOfMothers();
+            if (!nMo) {std::cout << "Particle ID=" << p.pdgId() << ", pt=" << p.pt() << " has no mothers" << std::endl;}
+            else{
+              std::cout << "Particle ID=" << p.pdgId() << ", pt=" << p.pt() <<", m=" << p.mass() << " with mothers: " << std::endl;
+              for(unsigned int i=0;i<nMo;++i){
+                std::cout << "    Mother ID=" << p.mother(i)->pdgId() << ", pt=" << p.mother(i)->pt() << std::endl;
+              }
+            }
 
-    //      for(UInt_t i = 0; i < genparts->size(); ++i){
-    // const reco::GenParticle& p = (*genparts)[i];
-    // if ( p.status()!=1 || p.charge()==0) continue;
-    // double dr = deltaR(jet,p);
-    // if(dr < rParam){
-    //   double ppt = p.pt();
-    //   jets_.genChargedSum[jets_.nref] += ppt;
-    //   if(ppt > hardPtMin_) jets_.genHardSum[jets_.nref] += ppt;
-    //   if(p.collisionId() == 0){
-    //     jets_.signalChargedSum[jets_.nref] += ppt;
-    //     if(ppt > hardPtMin_) jets_.signalHardSum[jets_.nref] += ppt;
-    //   }
-    // }
-    //      }
-    //    }
+            unsigned int nDa=p.numberOfDaughters();
+            if (!nDa) {std::cout << "Particle ID=" << p.pdgId() << ", pt=" << p.pt() << " has no daughters" << std::endl;}
+            else{
+              std::cout << "Particle ID=" << p.pdgId() << ", pt=" << p.pt() << " with daughters: " << std::endl;
+              for(unsigned int i=0;i<nDa;++i){
+                std::cout << "    Daughter ID=" << p.daughter(i)->pdgId() << ", pt=" << p.daughter(i)->pt() << std::endl;
+              }
+            }
+            
+            // std::cout << "charm gen particle inside gen-jet" << std::endl;
+          }
+        }
+      }
+      else{
+        std::cout << "no corresponding gen jet" << std::endl;
+      }
+    }
 
     if (isMC_) {
       const reco::GenJet* genjet = jet.genJet();

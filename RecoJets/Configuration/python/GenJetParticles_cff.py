@@ -6,7 +6,9 @@ import FWCore.ParameterSet.Config as cms
 # 
 #
 genParticlesForJets = cms.EDProducer("InputGenJetsParticleSelector",
-    src = cms.InputTag("genParticles"),
+    src = cms.InputTag("packedGenParticlesSignal"),
+    inputPruned = cms.InputTag("prunedGenParticles"),
+    isMiniAOD = cms.bool(True),
     ignoreParticleIDs = cms.vuint32(
          1000022,
          1000012, 1000014, 1000016,
