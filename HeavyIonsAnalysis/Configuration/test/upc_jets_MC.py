@@ -140,11 +140,11 @@ process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis +
     process.hiEvtAnalyzer +
-    process.HiMergedGenParticleAna +
-    process.genParticlesForJets
+    process.HiMergedGenParticleAna 
+    # process.genParticlesForJets
     # process.hltobject +
     # process.l1object +
-    # # process.HiGenParticleAna +
+    # process.HiGenParticleAna
     # process.ggHiNtuplizer +
     # process.trackSequencePP
 )
@@ -153,7 +153,7 @@ process.forest = cms.Path(
 #####################################################################################
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
-jetPtMin = 15
+jetPtMin = 10
 jetAbsEtaMax = 2.5
 
 # Choose which additional information is added to jet trees

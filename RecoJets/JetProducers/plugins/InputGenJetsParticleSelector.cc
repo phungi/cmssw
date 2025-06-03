@@ -267,20 +267,18 @@ void InputGenJetsParticleSelector::produce (edm::StreamID, edm::Event &evt, cons
 
     auto selected_ = std::make_unique<reco::CandidateCollection>();
     std::vector<const reco::Candidate*> particles;
-
     //Pruned loop - add to new collection unsatable particles (D)  
     edm::Handle<reco::CandidateView> prunedGenParticles;
     if(isMiniAOD){
         evt.getByToken(input_prunedgenpartcoll_token_, prunedGenParticles );
-        // std::cout << "Are we in miniaod? pruned size " << prunedGenParticles->size() << std::endl;
-        std::cout << "PRUNED COLLECTION!" << std::endl;
+        std::cout << "Are we in miniaod? pruned size " << prunedGenParticles->size() << std::endl;
+        // std::cout << "PRUNED COLLECTION!" << std::endl;
         for (edm::View<reco::Candidate>::const_iterator iter=prunedGenParticles->begin();iter!=prunedGenParticles->end();++iter){
           // std::cout << "Pruned " << iter->pdgId() << " pt=" << iter->pt() << " stat=" << iter->status() << std::endl;
-            if(iter->status()!=1) // to avoid double-counting, skipping stable particles already contained in the collection of PackedGenParticles
+            if(iter->status()!=1){ // to avoid double-counting, skipping stable particles already contained in the collection of PackedGenParticles
               particles.push_back(&*iter);
-              // if(storeDKPi && isDKPi(&*iter)){
-                  selected_->push_back(*iter);
-            // }
+              selected_->push_back(*iter);
+            } 
         }
     }
 
@@ -290,36 +288,37 @@ void InputGenJetsParticleSelector::produce (edm::StreamID, edm::Event &evt, cons
 
     std::map<const reco::Candidate*,size_t> particlePtrIdxMap;
     //will try to cast the pruned collection into reco::Candidate in this script so we directly push into the output collection
-    std::cout << "Pruned loop begin..." << std::endl;
-    for (auto iter = pruned_handle->begin();iter!=pruned_handle->end();++iter){
-      std::cout << "Pruned id=" << iter->pdgId() << ", pt=" << iter->pt() << ", hard process=" << iter->isHardProcess() << ", collision id =" << iter->collisionId() << ", hard process decayed=" << iter->fromHardProcessDecayed() << std::endl;
-      unsigned int nDa=iter->numberOfDaughters();
-            if (!nDa) {std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt()  << ", collision id =" << iter->collisionId() << ", status =" << iter->status() << " has no daughters" << std::endl;}
-            else{
-              std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt() << " with daughters: " << std::endl;
-              for(unsigned int i=0;i<nDa;++i){
-                std::cout << "    Daughter ID=" << iter->daughter(i)->pdgId() << ", pt=" << iter->daughter(i)->pt() << std::endl;
-              }
-            }
-    }
-    std::cout << "Pruned loop end..." << std::endl;
-    std::cout << "Packed loop begin..." << std::endl;
+    // std::cout << "Pruned loop begin..." << std::endl;
+    // for (auto iter = pruned_handle->begin();iter!=pruned_handle->end();++iter){
+      // std::cout << "Pruned id=" << iter->pdgId() << ", pt=" << iter->pt() << ", hard process=" << iter->isHardProcess() << ", collision id =" << iter->collisionId() << ", hard process decayed=" << iter->fromHardProcessDecayed() << std::endl;
+      // unsigned int nDa=iter->numberOfDaughters();
+      //       if (!nDa) {std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt()  << ", collision id =" << iter->collisionId() << ", status =" << iter->status() << " has no daughters" << std::endl;}
+      //       else{
+      //         std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt() << " with daughters: " << std::endl;
+      //         for(unsigned int i=0;i<nDa;++i){
+      //           std::cout << "    Daughter ID=" << iter->daughter(i)->pdgId() << ", pt=" << iter->daughter(i)->pt() << std::endl;
+      //         }
+      //       }
+    // }
+    // std::cout << "Pruned loop end..." << std::endl;
+    // std::cout << "Packed loop begin..." << std::endl;
+    std::cout << "Packed candidate size " << genParticles->size() << std::endl;
     for (edm::View<reco::Candidate>::const_iterator iter=genParticles->begin();iter!=genParticles->end();++iter){
-      std::cout << "PACKED id=" << iter->pdgId() << ", pt=" << iter->pt() << " stat=" << iter->status() << std::endl;
-      unsigned int nMo=iter->numberOfMothers();
-            if (!nMo) {std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt() << ", status=" << iter->status() << " has no daughters" << std::endl;}
-            else{
-              std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt() << " with mothers: " << std::endl;
-              for(unsigned int i=0;i<nMo;++i){
-                std::cout << "    Mother ID=" << iter->mother(i)->pdgId() << ", pt=" << iter->mother(i)->pt() << std::endl;
-              }
-            }
+      // std::cout << "PACKED id=" << iter->pdgId() << ", pt=" << iter->pt() << " stat=" << iter->status() << std::endl;
+      // unsigned int nMo=iter->numberOfMothers();
+      //       if (!nMo) {std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt() << ", status=" << iter->status() << " has no daughters" << std::endl;}
+      //       else{
+      //         std::cout << "Particle ID=" << iter->pdgId() << ", pt=" << iter->pt() << " with mothers: " << std::endl;
+      //         for(unsigned int i=0;i<nMo;++i){
+      //           std::cout << "    Mother ID=" << iter->mother(i)->pdgId() << ", pt=" << iter->mother(i)->pt() << std::endl;
+      //         }
+      //       }
       particles.push_back(&*iter);
       // if(iter->status()!=1 ) { std::cout << "Unstable particle in selector, " << iter->pdgId() << std::endl;}
       // if(storeDKPi && isFromDKPi(&*iter)) continue;
       selected_->push_back(*iter);
     }
-    std::cout << "Packed loop end..." << std::endl;
+    std::cout << "Combined particle collection size " << selected_->size() << std::endl;
 
     evt.put(std::move(selected_));
 

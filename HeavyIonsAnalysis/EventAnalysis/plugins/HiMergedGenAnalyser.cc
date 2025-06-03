@@ -50,7 +50,7 @@ static const Int_t ETABINS = 3;  // Fix also in branch string
 // class decleration
 //
 
-struct HydjetEvent {
+struct GenStruct {
   Int_t event;
   Float_t b;
   Float_t npart;
@@ -73,6 +73,10 @@ struct HydjetEvent {
   std::vector<Int_t> matchingID;
   std::vector<Int_t> nMothers;
   std::vector<std::vector<Int_t>> motherIndex;
+  std::vector<std::vector<Int_t>> custom_motherIndex;
+  std::vector<std::vector<Int_t>> custom_daughterIndex;
+  // Float_t tge;
+  // std::vector<std::vector<Int_t>> haha;
   std::vector<Int_t> nDaughters;
   std::vector<std::vector<Int_t>> daughterIndex;
   // std::vector<Bool_t> isFromHardScatter;
@@ -97,15 +101,20 @@ private:
   void beginJob() override;
   void analyze(const edm::Event&, const edm::EventSetup&) override;
   void endJob() override;
-  vector<int> getMotherIdx(edm::Handle<reco::CandidateView>, const reco::Candidate&);
-  vector<int> getDaughterIdx(edm::Handle<reco::CandidateView>, const reco::Candidate&);
+  Bool_t passesSelection(const reco::Candidate* p);
+  vector<int> getMotherIdx(std::vector<const reco::Candidate*> parts, const reco::Candidate *);
+  vector<int> getDaughterIdx(std::vector<const reco::Candidate*> parts, const reco::Candidate *);
+  void getMotherIdxCustom(vector<int> &, std::vector<const reco::Candidate*> parts, const reco::Candidate *);
+  void getDaughterIdxCustom(vector<int> &, std::vector<const reco::Candidate*> parts, const reco::Candidate *);
+
+
 
   // ----------member data ---------------------------
 
   edm::EDGetTokenT<edm::SimVertexContainer> g4Label;
 
   TTree* hydjetTree_;
-  HydjetEvent hev_;
+  GenStruct hev_;
 
   Bool_t doVertex_;
   Bool_t useHepMCProduct_;
@@ -189,63 +198,128 @@ HiMergedGenAnalyser::~HiMergedGenAnalyser() {
 // member functions
 //
 
-// vector<int> HiMergedGenAnalyser::getMotherIdx(edm::Handle<reco::CandidateView> parts, const reco::Candidate& pin) {
-//   vector<int> motherArr;
-//   if (!motherDaughterPDGsToSave_.empty()) {
-//     for (UInt_t i = 0; i < parts->size(); ++i) {
-//       const reco::Candidate& p = (*parts)[i];
-//       if (stableOnly_ && p.status() != 1)
-//         continue;
-//       if (p.pt() < ptMin_)
-//         continue;
-//       if (chargedOnly_ && p.charge() == 0)
-//         continue;
-//       bool saveFlag = false;
-//       for (unsigned int ipdg = 0; ipdg < motherDaughterPDGsToSave_.size(); ipdg++) {
-//         if (p.pdgId() == motherDaughterPDGsToSave_.at(ipdg))
-//           saveFlag = true;
-//       }
-//       if (!motherDaughterPDGsToSave_.empty() && saveFlag != true)
-//         continue;  //save all particles in vector unless vector is empty, then save all particles
-//       if (p.status() == 3)
-//         continue;  //don't match to the initial collision particles
-//       for (unsigned int idx = 0; idx < p.numberOfDaughters(); idx++) {
-//         //if (p.daughter(idx)->pt()*p.daughter(idx)->eta()*p.daughter(idx)->phi() == pin.pt()*pin.eta()*pin.phi()) motherArr.push_back(i);
-//         if (fabs(p.daughter(idx)->pt() - pin.pt()) < 0.001 && fabs(p.daughter(idx)->eta() - pin.eta()) < 0.001 &&
-//             fabs(p.daughter(idx)->phi() - pin.phi()) < 0.001)
-//           motherArr.push_back(i);
-//       }
-//     }
-//   }
-//   if (motherArr.empty())
-//     motherArr.push_back(-999);
-//   return motherArr;
-// }
+Bool_t HiMergedGenAnalyser::passesSelection(const reco::Candidate* p){
+  if (stableOnly_ && p->status() != 1) return false;
+  if (p->pt() < ptMin_) return false;
+  // if (fabs(p->eta()) > etaMax_) return false;
+  if (chargedOnly_ && p->charge() == 0) return false;
+  return true;
+}
+void HiMergedGenAnalyser::getMotherIdxCustom(vector<int> &motherArr, std::vector<const reco::Candidate*> parts, const reco::Candidate *pin){
+  // std::cout << "we are in the custom function " << std::endl;
+  unsigned int nMo=pin->numberOfMothers();
+  // std::cout << "Number of mothers " << nMo << std::endl;
+  if ( !nMo or nMo==0 ) return;
+  for(unsigned int i{0}; i < nMo; ++i){
+    const reco::Candidate* mo = pin->mother(i);
+    Bool_t keep = passesSelection(mo);
+    // std::cout << "keeping this mother particle!" << std::endl;
+    if(keep){
+      // std::cout << "Go in loop of size " << parts->size() << std::endl;
+      // double min_dr = 99999;
+      double closest_pdgid = 0;
+      // std::cout << pin->numberOfMothers() << " mothers " << std::endl;
+      // std::cout << "collection in function " << parts.size() << " mother count " << nMo << std::endl;
+      for (UInt_t j = 0; j < parts.size(); ++j) {
+        const reco::Candidate * p = (parts)[j];
+        // unsigned int nDa = p->numberOfDaughters();
+        for (unsigned int idx = 0; idx < p->numberOfDaughters(); idx++) {
+          // double rij = fabs(p->daughter(idx)->eta() - pin->eta())*fabs(p->daughter(idx)->eta() - pin->eta()) + fabs(p->daughter(idx)->phi() - pin->phi())*fabs(p->daughter(idx)->phi() - pin->phi());
+          // if(rij < min_dr){
+          //   min_dr = rij;
+          //   closest_pdgid = p->daughter(idx)->pdgId();
+          // }
+          // don't use the dR dpT method, just check if pointers are the same
+          // if (fabs(p->daughter(idx)->pt() - pin->pt()) < 0.001 && fabs(p->daughter(idx)->eta() - pin->eta()) < 0.001 && fabs(p->daughter(idx)->phi() - pin->phi()) < 0.001){
+          // }
+          if(p->daughter(idx) == pin){
+            // std::cout << "coming from particle " << pin->pdgId() << " saving idx " << j << std::endl;
+            if( find(motherArr.begin(), motherArr.end(), j) == motherArr.end() ){
+              motherArr.push_back(j);
+              break;
+            }
+          }
+        }
+      }
+    }
+    //if we don't keep the daughter, record that we skipped a particle 
+    else{
+      motherArr.push_back(-999);
+    }
+    getMotherIdxCustom(motherArr, parts, mo);
+  }
+}
 
-vector<int> HiMergedGenAnalyser::getMotherIdx(edm::Handle<reco::CandidateView> parts, const reco::Candidate& pin) {
+void HiMergedGenAnalyser::getDaughterIdxCustom(vector<int> &daughterArr, std::vector<const reco::Candidate*> parts, const reco::Candidate *pin){
+  // std::cout << "we are in the custom function " << std::endl;
+  unsigned int nDa=pin->numberOfDaughters();
+  // std::cout << "Number of mothers " << nMo << std::endl;
+  if ( !nDa or nDa==0 ){
+    daughterArr.push_back(-999);
+    return;
+  }
+  for(unsigned int i{0}; i < 1; ++i){
+    const reco::Candidate* da = pin->daughter(i);
+    bool keep = passesSelection(da);
+    if(keep){
+      // std::cout << "Go in loop of size " << parts->size() << std::endl;
+      // double min_dr = 99999;
+      // double closest_pdgid = 0;
+      // std::cout << pin->numberOfMothers() << " mothers " << std::endl;
+      // std::cout << "collection in function " << parts.size() << " daughter count " << nDa << std::endl;
+      for (UInt_t j = 0; j < parts.size(); ++j) {
+        const reco::Candidate * p = (parts)[j];
+        // unsigned int nMo = p->numberOfMothers();
+        for (unsigned int idx = 0; idx < p->numberOfMothers(); idx++){
+          // double rij = fabs(p->daughter(idx)->eta() - pin->eta())*fabs(p->daughter(idx)->eta() - pin->eta()) + fabs(p->daughter(idx)->phi() - pin->phi())*fabs(p->daughter(idx)->phi() - pin->phi());
+          // if(rij < min_dr){
+          //   min_dr = rij;
+          //   closest_pdgid = p->daughter(idx)->pdgId();
+          // }
+          // don't use the dR dpT method, just check if pointers are the same
+          // if (fabs(p->daughter(idx)->pt() - pin->pt()) < 0.001 && fabs(p->daughter(idx)->eta() - pin->eta()) < 0.001 && fabs(p->daughter(idx)->phi() - pin->phi()) < 0.001){
+          // }
+          if(p->mother(idx) == pin){
+            // std::cout << "coming from particle " << pin->pdgId() << " with pt=" << pin->pt() << " saving idx " << j << " with id " << p->pdgId() << "and pt=" << p->pt() << std::endl;
+            if( find(daughterArr.begin(), daughterArr.end(), j) == daughterArr.end() ){
+              daughterArr.push_back(j);
+            }
+          }
+        }
+      }
+    }
+    //if we don't keep the daughter, record that we skipped a particle 
+    else{
+      daughterArr.push_back(-999);
+    }
+    getDaughterIdxCustom(daughterArr, parts, da);
+  }
+}
+
+vector<int> HiMergedGenAnalyser::getMotherIdx(std::vector<const reco::Candidate*> parts, const reco::Candidate *pin) {
   vector<int> motherArr;
   if (!motherDaughterPDGsToSave_.empty()) {
-    for (UInt_t i = 0; i < parts->size(); ++i) {
-      const reco::Candidate& p = (*parts)[i];
-      if (stableOnly_ && p.status() != 1)
+    for (UInt_t i = 0; i < parts.size(); ++i) {
+      const reco::Candidate* p = (parts)[i];
+      if (stableOnly_ && p->status() != 1)
         continue;
-      if (p.pt() < ptMin_)
+      if (p->pt() < ptMin_)
         continue;
-      if (chargedOnly_ && p.charge() == 0)
+      if (chargedOnly_ && p->charge() == 0)
         continue;
       bool saveFlag = false;
       for (unsigned int ipdg = 0; ipdg < motherDaughterPDGsToSave_.size(); ipdg++) {
-        if (p.pdgId() == motherDaughterPDGsToSave_.at(ipdg))
+        if (p->pdgId() == motherDaughterPDGsToSave_.at(ipdg))
           saveFlag = true;
       }
       if (!motherDaughterPDGsToSave_.empty() && saveFlag != true)
         continue;  //save all particles in vector unless vector is empty, then save all particles
-      if (p.status() == 3)
+      if (p->status() == 3)
         continue;  //don't match to the initial collision particles
-      for (unsigned int idx = 0; idx < p.numberOfDaughters(); idx++) {
-        //if (p.daughter(idx)->pt()*p.daughter(idx)->eta()*p.daughter(idx)->phi() == pin.pt()*pin.eta()*pin.phi()) motherArr.push_back(i);
-        if (fabs(p.daughter(idx)->pt() - pin.pt()) < 0.001 && fabs(p.daughter(idx)->eta() - pin.eta()) < 0.001 &&
-            fabs(p.daughter(idx)->phi() - pin.phi()) < 0.001)
+      for (unsigned int idx = 0; idx < p->numberOfDaughters(); idx++) {
+        //if (p->daughter(idx)->pt()*p->daughter(idx)->eta()*p->daughter(idx)->phi() == pin->pt()*pin->eta()*pin->phi()) motherArr.push_back(i);
+        if (fabs(p->daughter(idx)->pt() - pin->pt()) < 0.001 && fabs(p->daughter(idx)->eta() - pin->eta()) < 0.001 &&
+            fabs(p->daughter(idx)->phi() - pin->phi()) < 0.001)
           motherArr.push_back(i);
       }
     }
@@ -256,30 +330,30 @@ vector<int> HiMergedGenAnalyser::getMotherIdx(edm::Handle<reco::CandidateView> p
 }
 
 // //----------------------------------------------------------
-vector<int> HiMergedGenAnalyser::getDaughterIdx(edm::Handle<reco::CandidateView> parts, const reco::Candidate& pin) {
+vector<int> HiMergedGenAnalyser::getDaughterIdx(std::vector<const reco::Candidate*> parts, const reco::Candidate *pin) {
   vector<int> daughterArr;
   if (!motherDaughterPDGsToSave_.empty()) {
-    for (UInt_t i = 0; i < parts->size(); ++i) {
-      const reco::Candidate& p = (*parts)[i];
-      if (stableOnly_ && p.status() != 1)
+    for (UInt_t i = 0; i < parts.size(); ++i) {
+      const reco::Candidate* p = (parts)[i];
+      if (stableOnly_ && p->status() != 1)
         continue;
-      if (p.pt() < ptMin_)
+      if (p->pt() < ptMin_)
         continue;
-      if (chargedOnly_ && p.charge() == 0)
+      if (chargedOnly_ && p->charge() == 0)
         continue;
       bool saveFlag = false;
       for (unsigned int ipdg = 0; ipdg < motherDaughterPDGsToSave_.size(); ipdg++) {
-        if (p.pdgId() == motherDaughterPDGsToSave_.at(ipdg))
+        if (p->pdgId() == motherDaughterPDGsToSave_.at(ipdg))
           saveFlag = true;
       }
       if (!motherDaughterPDGsToSave_.empty() && saveFlag != true)
         continue;  //save all particles in vector unless vector is empty, then save all particles
-      if (p.status() == 3)
+      if (p->status() == 3)
         continue;  //don't match to the initial collision particles
-      for (unsigned int idx = 0; idx < p.numberOfMothers(); idx++) {
-        //if (p.mother(idx)->pt()*p.mother(idx)->eta()*p.mother(idx)->phi() == pin.pt()*pin.eta()*pin.phi()) daughterArr.push_back(i);
-        if (fabs(p.mother(idx)->pt() - pin.pt()) < 0.001 && fabs(p.mother(idx)->eta() - pin.eta()) < 0.001 &&
-            fabs(p.mother(idx)->phi() - pin.phi()) < 0.001)
+      for (unsigned int idx = 0; idx < p->numberOfMothers(); idx++) {
+        //if (p->mother(idx)->pt()*p->mother(idx)->eta()*p->mother(idx)->phi() == pin->pt()*pin->eta()*pin->phi()) daughterArr.push_back(i);
+        if (fabs(p->mother(idx)->pt() - pin->pt()) < 0.001 && fabs(p->mother(idx)->eta() - pin->eta()) < 0.001 &&
+            fabs(p->mother(idx)->phi() - pin->phi()) < 0.001)
           daughterArr.push_back(i);
       }
     }
@@ -306,8 +380,11 @@ void HiMergedGenAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetu
   hev_.matchingID.clear();
   hev_.nMothers.clear();
   hev_.motherIndex.clear();
+  hev_.custom_motherIndex.clear();
+  hev_.custom_daughterIndex.clear();
   hev_.nDaughters.clear();
   hev_.daughterIndex.clear();
+  // hev_.haha.clear();
   // hev_.isFromHardScatter.clear();
 
   hev_.event = iEvent.id().event();
@@ -383,48 +460,54 @@ void HiMergedGenAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetu
   //   }
   // }
   // else {
+
     edm::Handle<reco::CandidateView> parts;
     iEvent.getByToken(packedGenParticlesSignalSrc_, parts);
     edm::Handle<reco::CandidateView> pruned;
     iEvent.getByToken(prunedGenParticlesSrc_, pruned);
 
-    auto combined = std::make_unique<reco::CandidateCollection>();;
-    for(UInt_t i{0}; i < parts->size(); ++i){
-      const reco::Candidate& p = (*parts)[i];
-      combined->push_back(p);
+    std::vector<const reco::Candidate*> combined;
+    for(auto iter=parts->begin(); iter!=parts->end(); ++iter){
+      combined.push_back(&*iter);
     }
-    for(UInt_t i{0}; i < pruned->size(); ++i){
-      const reco::Candidate& p = (*pruned)[i];
+    for(auto iter=pruned->begin(); iter!=pruned->end(); ++iter){
       //skip stable pruned particles
-      if(p.status() == 1) continue;
-      combined->push_back(p);
+      if(iter->status()==1) continue;
+      combined.push_back(&*iter);
     }
 
-    // const reco::Particle& ppacked = (*pruned)[1];
-    // const reco::GenParticle& ppruned = (*pruned)[1];
-    // bool hasSignalPackedGen = iEvent.getByToken(signalPackedGenParticleSrc_, signalPackedGenParticles);
-    std::cout << "Combined container size " << combined->size() << std::endl;
-    for (UInt_t i = 0; i < combined->size(); ++i){
+    // std::cout << "Combined container size " << combined.size() << std::endl;
+    //clear out the unwanted particles 
+    std::vector<const reco::Candidate*> particles;
+    for (UInt_t i = 0; i < combined.size(); ++i){
+      const reco::Candidate* p = (combined)[i];
+      Bool_t keep = passesSelection(p);
+      if(keep) particles.push_back(p);
+    }
+    // std::cout << "Reduced to container size " << particles.size() << std::endl;
+    for (UInt_t i = 0; i < particles.size(); ++i){
       // const reco::GenParticle& p = (*parts)[i];
-      const reco::Candidate& p = (*combined)[i];
-      if (stableOnly_ && p.status() != 1)
-        continue;
-      // std::cout << "here " << std::endl;
-      if (p.pt() < ptMin_)
-        continue;
-      // std::cout << "here 1" << std::endl;
-      if (fabs(p.eta()) > etaMax_)
-        continue;
-      // std::cout << "here 2" << std::endl;
-      if (chargedOnly_ && p.charge() == 0)
-        continue;
+      const reco::Candidate* p = (particles)[i];
+      // if (stableOnly_ && p->status() != 1)
+      //   continue;
+      // if (p->pt() < ptMin_)
+      //   continue;
+      // if (fabs(p->eta()) > etaMax_)
+      //   continue;
+      // if (chargedOnly_ && p->charge() == 0)
+      //   continue;
+      unsigned int daN = p->numberOfDaughters();
+      // std::cout << "Pushing back combined particle: pt=" << p->pt() << " eta=" << p->eta() << " phi=" << p->phi() << std::endl;
+      hev_.pt.push_back(p->pt());
+      hev_.eta.push_back(p->eta());
+      hev_.phi.push_back(p->phi());
+      hev_.pdg.push_back(p->pdgId());
+      hev_.chg.push_back(p->charge());
 
-      // std::cout << "Pushing back combined particle: pt=" << p.pt() << " eta=" << p.eta() << " phi=" << p.phi() << std::endl;
-      hev_.pt.push_back(p.pt());
-      hev_.eta.push_back(p.eta());
-      hev_.phi.push_back(p.phi());
-      hev_.pdg.push_back(p.pdgId());
-      hev_.chg.push_back(p.charge());
+      unsigned int nDa = p->numberOfDaughters();
+      for(unsigned int i{0}; i < nDa; ++i){
+        // std::cout << "particle of " << p->pdgId() << " with daughter " << p->daughter(i)->pdgId() << " in pos " << i << " with pt=" << p->daughter(i)->pt() << std::endl; 
+      }
       //these are final state particles anyway, they don't come from the hard scatter
       // hev_.isFromHardScatter.push_back(0);
       // collisionId_ is not kept in pat::PackedGenParticle, use "packedGenParticlesSignal" (added by https://github.com/cms-sw/cmssw/pull/32668/) to tag particles from signal process
@@ -440,15 +523,24 @@ void HiMergedGenAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetu
       // } else {
       //   hev_.sube.push_back(-999);
       // }
-      hev_.sta.push_back(p.status());
+      hev_.sta.push_back(p->status());
       hev_.matchingID.push_back(i);
-      hev_.nMothers.push_back(p.numberOfMothers());
-      vector<int> tempMothers = getMotherIdx(parts, p);
+      hev_.nMothers.push_back(p->numberOfMothers());
+      vector<int> tempMothers = getMotherIdx(particles, p);
       hev_.motherIndex.push_back(tempMothers);
-      hev_.nDaughters.push_back(p.numberOfDaughters());
-      vector<int> tempDaughters = getDaughterIdx(parts, p);
+
+      vector<int> tempcustomMothers = {};
+      getMotherIdxCustom(tempcustomMothers, particles, p);
+      hev_.custom_motherIndex.push_back(tempcustomMothers);
+
+      vector<int> tempcustomDaughters = {};
+      getDaughterIdxCustom(tempcustomDaughters, particles, p);
+      hev_.custom_daughterIndex.push_back(tempcustomDaughters);
+
+      hev_.nDaughters.push_back(p->numberOfDaughters());
+      vector<int> tempDaughters = getDaughterIdx(particles, p);
       hev_.daughterIndex.push_back(tempDaughters);
-      Double_t eta = fabs(p.eta());
+      Double_t eta = fabs(p->eta());
 
       Int_t etabin = 0;
       if (eta > 0.5)
@@ -456,69 +548,11 @@ void HiMergedGenAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetu
       if (eta > 1.)
         etabin = 2;
       if (eta < 2.) {
-        hev_.ptav[etabin] += p.pt();
+        hev_.ptav[etabin] += p->pt();
         ++(hev_.n[etabin]);
       }
       ++(hev_.mult);
     }
-    //same thing for pruned particles:
-    // for (UInt_t i = 0; i < pruned->size(); ++i){
-    //   // const reco::GenParticle& p = (*parts)[i];
-    //   const reco::Candidate& p = (*pruned)[i];
-    //   if (stableOnly_ && p.status() != 1)
-    //     continue;
-    //   if(p.status() == 1) 
-    //     continue;
-    //   if (p.pt() < ptMin_)
-    //     continue;
-    //   if (fabs(p.eta()) > etaMax_)
-    //     continue;
-    //   if (chargedOnly_ && p.charge() == 0)
-    //     continue;
-    //   std::cout << "Pushing back packed particle: pt=" << p.pt() << " eta=" << p.eta() << " phi=" << p.phi() << std::endl;
-    //   hev_.pt.push_back(p.pt());
-    //   hev_.eta.push_back(p.eta());
-    //   hev_.phi.push_back(p.phi());
-    //   hev_.pdg.push_back(p.pdgId());
-    //   hev_.chg.push_back(p.charge());
-    //   //these are final state particles anyway, they don't come from the hard scatter
-    //   // hev_.isFromHardScatter.push_back(0);
-    //   // collisionId_ is not kept in pat::PackedGenParticle, use "packedGenParticlesSignal" (added by https://github.com/cms-sw/cmssw/pull/32668/) to tag particles from signal process
-    //   // if (hasSignalPackedGen) {
-    //   //   int tmpSube = 1;
-    //   //   for (auto pSig = signalPackedGenParticles->begin(); pSig != signalPackedGenParticles->end(); ++pSig) {
-    //   //     if (&(*pSig) == &(*parts)[i]){
-    //   //       tmpSube = 0;
-    //   //       break;
-    //   //     }
-    //   //   }
-    //   //   hev_.sube.push_back(tmpSube);
-    //   // } else {
-    //   //   hev_.sube.push_back(-999);
-    //   // }
-    //   hev_.sta.push_back(p.status());
-    //   hev_.matchingID.push_back(i);
-    //   hev_.nMothers.push_back(p.numberOfMothers());
-    //   vector<int> tempMothers = getMotherIdx(pruned, p);
-    //   hev_.motherIndex.push_back(tempMothers);
-    //   hev_.nDaughters.push_back(p.numberOfDaughters());
-    //   vector<int> tempDaughters = getDaughterIdx(pruned, p);
-    //   hev_.daughterIndex.push_back(tempDaughters);
-    //   Double_t eta = fabs(p.eta());
-
-    //   Int_t etabin = 0;
-    //   if (eta > 0.5)
-    //     etabin = 1;
-    //   if (eta > 1.)
-    //     etabin = 2;
-    //   if (eta < 2.) {
-    //     hev_.ptav[etabin] += p.pt();
-    //     ++(hev_.n[etabin]);
-    //   }
-    //   ++(hev_.mult);
-    // }
-
-
 
     if (doHI_) {
       edm::Handle<edm::GenHIEvent> higen;
@@ -564,7 +598,7 @@ void HiMergedGenAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetu
   hev_.vz = vz;
   hev_.vr = vr;
 
-  // hydjetTree_->Fill();
+  hydjetTree_->Fill();
 }
 
 // ------------ method called once each job just before starting event loop  ------------
@@ -596,6 +630,8 @@ void HiMergedGenAnalyser::beginJob() {
     hydjetTree_->Branch("matchingID", &hev_.matchingID);
     hydjetTree_->Branch("nMothers", &hev_.nMothers);
     hydjetTree_->Branch("motherIdx", &hev_.motherIndex);
+    hydjetTree_->Branch("custom_motherIdx", &hev_.custom_motherIndex);
+    hydjetTree_->Branch("custom_daughterIdx", &hev_.custom_daughterIndex);
     hydjetTree_->Branch("nDaughters", &hev_.nDaughters);
     hydjetTree_->Branch("daughterIdx", &hev_.daughterIndex);
     if (!stableOnly_) {

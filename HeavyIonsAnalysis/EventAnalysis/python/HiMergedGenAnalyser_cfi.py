@@ -4,7 +4,7 @@ HiMergedGenParticleAna = cms.EDAnalyzer(
     'HiMergedGenAnalyser',
     doVertex = cms.untracked.bool(False),
     etaMax = cms.untracked.double(2.5),
-    ptMin = cms.untracked.double(2),
+    ptMin = cms.untracked.double(0),
     chargedOnly = cms.untracked.bool(False),
     stableOnly = cms.untracked.bool(False),
     src = cms.untracked.InputTag("generator"),
