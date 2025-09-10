@@ -49,7 +49,7 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     doRatioNeuPFScaling = cms.untracked.bool(False),
     #peripheral scaling is not working in case we have only core neutrals!
     doPeripheralNeuPFScaling = cms.untracked.bool(False),
-    doCompensatoryNeuPFScaling = cms.untracked.bool(False)
+    doCompensatoryNeuPFScaling = cms.untracked.bool(False),
     # jetTag = cms.InputTag("ak4PFJets"),
     # caloJetTag = cms.InputTag("slimmedCaloJets"),
     # jetPtMin = cms.double(5.0),
@@ -76,5 +76,5 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     # doHiJetID = cms.untracked.bool(False),
     # doStandardJetID = cms.untracked.bool(False),
     # doSubEvent = cms.untracked.bool(False),
-    # doBtagging = cms.untracked.bool(False),
+    doBtagging = cms.untracked.bool(False),
     )

@@ -127,6 +127,7 @@ private:
   bool fillGenJets_;
   bool useQuality_;
   std::string trackQuality_;
+  bool doBtagging_;
 
   bool doPrimaryLJPReco_;
   bool doPrimaryLJPTruth_;

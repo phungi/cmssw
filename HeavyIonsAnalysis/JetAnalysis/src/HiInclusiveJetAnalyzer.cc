@@ -46,6 +46,8 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   doGenTaus_ = iConfig.getUntrackedParameter<bool>("doGenTaus",0);
   doGenSym_ = iConfig.getUntrackedParameter<bool>("doGenSym",0);
   doSubJets_ = iConfig.getUntrackedParameter<bool>("doSubJets",0);
+
+  doBtagging_ = iConfig.getUntrackedParameter<bool>("doBtagging", false);
   doJetConstituents_ = iConfig.getUntrackedParameter<bool>("doJetConstituents", false);
   doGenSubJets_ = iConfig.getUntrackedParameter<bool>("doGenSubJets", false);
   if (doGenSubJets_)
@@ -115,10 +117,10 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
 
   doSubEvent_ = 0;
   doChargedConstOnly_ = iConfig.getUntrackedParameter<bool>("doChargedConstOnly",0);
-  TrackVariation_ = -1;
-  pfChargedCandidateEnergyScale_ = -1;
-  pfNeutralCandidateEnergyScale_ = -1;
-  pfGammaCandidateEnergyScale_ = -1;
+  TrackVariation_ = 1;
+  pfChargedCandidateEnergyScale_ = 1;
+  pfNeutralCandidateEnergyScale_ = 1;
+  pfGammaCandidateEnergyScale_ = 1;
   pfNeutralSmear_ = false;
   doNaiveNeuPFScaling_ = false;
   doRatioNeuPFScaling_ = false;

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from CRABClient.UserUtilities import config
 
-jobTag = "PbPb_W_firstlook_20PDs"
+jobTag = "OO_data"
 config = config()
 config.section_('General')
 config.General.transferOutputs = True
@@ -9,7 +9,7 @@ config.General.requestName = jobTag
 config.General.workArea = 'crab_projects'
 
 config.section_('JobType')
-config.JobType.psetName = '/afs/cern.ch/user/v/vavladim/public/CMSSW_15_0_11/src/HeavyIonsAnalysis/Configuration/test/forest_miniAOD_run3_DATA.py'
+config.JobType.psetName = 'forest_miniAOD_run3_DATA.py'
 
 config.JobType.pluginName = 'Analysis'
 # ppRef_trigger_experiments.py
@@ -30,7 +30,7 @@ config.Data.splitting = 'EventAwareLumiBased'
 config.Data.outLFNDirBase = '/store/group/phys_heavyions/vavladim/' + config.General.requestName
 # config.Data.outLFNDirBase ='/store/user/vavladim/' + config.General.requestName
 # config.Data.outLFNDirBase = '/store/user/lcunquei/Run2_pp_data_CMT'
-config.Data.lumiMask = '/afs/cern.ch/user/v/vavladim/public/CMSSW_15_0_11/src/HeavyIonsAnalysis/Configuration/test/Cert_Collisions2025OO_394153_394217_golden.json'
+config.Data.lumiMask = '/afs/cern.ch/user/v/vavladim/public/recovery_OO_setup/CMSSW_15_0_11/src/HeavyIonsAnalysis/Configuration/test/Cert_Collisions2025OO_394153_394217_golden.json'
 config.section_('Site')
 # config.Site.storageSite = 'T2_IT_Rome'
 config.Site.storageSite = 'T2_CH_CERN'
@@ -111,5 +111,5 @@ if __name__ == '__main__':
     ]
     for dataset in dataset_list_2024PbPb:
         config.Data.inputDataset = dataset
-        config.General.requestName = 'OO_' + dataset.split('/')[1] + '_Re'
+        config.General.requestName = 'OO_' + dataset.split('/')[1]
         crabCommand('submit', config = config)

@@ -140,7 +140,7 @@ process.load("HeavyIonsAnalysis.JetAnalysis.RandomConeAnalysis_cff")
 process.forest = cms.Path(
     process.HiForestInfo +
     process.centralityBin +
-    process.hiEvtAnalyzer + 
+    process.hiEvtAnalyzer +
     process.hltanalysis
     # process.hltobject +
     # process.l1object +
@@ -172,7 +172,7 @@ doBtagging  =  False         # Note that setting to True increases computing tim
 jetLabelsCS = ["2", "4"]
 
 # For this list, give the R-values for flow subtracted CS jets (eta and phi dependent background)
-jetLabelsFlowCS = ["4"]
+jetLabelsFlowCS = []
 
 # Combine the two lists such that all selected jets can be easily looped over
 # Also add "Flow" tag for the flow jets to distinguish them from non-flow jets
@@ -190,7 +190,7 @@ for jetLabel in allJetLabels:
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetName = 'akCs'+jetLabel+'PF'
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
-    # getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doBtagging = doBtagging
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doBtagging = doBtagging
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = jetPtMin
