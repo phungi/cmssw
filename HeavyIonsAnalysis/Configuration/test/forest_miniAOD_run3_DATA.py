@@ -25,14 +25,13 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-         '/store/hidata/HIRun2024A/HIPhysicsRawPrime2/MINIAOD/PromptReco-v1/000/387/908/00000/93a76f4f-4e90-4357-9a7f-3c64a1be8e29.root'
-        #'/store/group/phys_heavyions/wangj/RECO2024/miniaod_PhysicsHIPhysicsRawPrime0_388056_ZB.root'
+        '/store/hidata/OORun2025/IonPhysics0/MINIAOD/PromptReco-v1/000/394/154/00000/14792428-42d1-4d08-9578-eed4891a4594.root'
     ), 
 )
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(20)
+    input = cms.untracked.int32(500)
     )
 
 ###############################################################################
@@ -99,7 +98,7 @@ process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
 #process.hiEvtAnalyzer.doCentrality = cms.bool(False)
-#process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
+process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 
 # FIXME: Do we have an updated trigger list?
 #from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2023_skimmed
@@ -132,31 +131,35 @@ process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
 process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 process.load('HeavyIonsAnalysis.ZDCAnalysis.FSCAnalyzers_cff')
 
+process.load("RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi")
+process.load("HeavyIonsAnalysis.JetAnalysis.RhoAnalysis_cff")
+process.load("HeavyIonsAnalysis.JetAnalysis.RandomConeAnalysis_cff")
+
 ###############################################################################
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo +
     process.centralityBin +
-    process.hiEvtAnalyzer +
-    process.hltanalysis +
-    #process.hltobject +
-    process.l1object +
-    process.trackSequencePbPb +
-    process.particleFlowAnalyser +
-    process.ggHiNtuplizer +
-    process.zdcSequencePbPb +
-    process.fscSequence +
-    process.unpackedMuons +
-    process.muonAnalyzer +
-    process.akPu4CaloJetAnalyzer
+    process.hiEvtAnalyzer + 
+    process.hltanalysis
+    # process.hltobject +
+    # process.l1object +
+    # process.trackSequencePbPb +
+    # process.particleFlowAnalyser +
+    # process.ggHiNtuplizer +
+    # process.zdcSequencePbPb +
+    # process.fscSequence +
+    # process.unpackedMuons +
+    # process.muonAnalyzer +
+    # process.akPu4CaloJetAnalyzer
     )
 
 #customisation
 
 # Select the types of jets filled
 matchJets = False             # Enables q/g and heavy flavor jet identification in MC 
-jetPtMin = 15
-jetAbsEtaMax = 2.5
+jetPtMin = 20
+jetAbsEtaMax = 2
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -166,7 +169,7 @@ doBtagging  =  False         # Note that setting to True increases computing tim
 # 0 means use original mini-AOD jets, otherwise use R value, e.g., 3,4,8
 # Add all the values you want to process to the list
 # These will create collections of CS subtracted jets (only eta dependent background)
-jetLabelsCS = ["4"]
+jetLabelsCS = ["2", "4"]
 
 # For this list, give the R-values for flow subtracted CS jets (eta and phi dependent background)
 jetLabelsFlowCS = ["4"]
@@ -187,7 +190,7 @@ for jetLabel in allJetLabels:
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetName = 'akCs'+jetLabel+'PF'
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
-    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doBtagging = doBtagging
+    # getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doBtagging = doBtagging
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = jetPtMin
@@ -198,6 +201,7 @@ for jetLabel in allJetLabels:
         getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFBtag")
     process.forest += getattr(process,"akCs"+jetLabel+"PFJetAnalyzer")
 
+process.forest += process.hiFJRhoFlowModulationProducer * process.rhoAnalysis * process.randomConeAnalysisR4 * process.randomConeAnalysisR2
 
 #########################
 # Event Selection -> add the needed filters here
@@ -206,40 +210,41 @@ for jetLabel in allJetLabels:
 process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
-process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
-process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
-process.pphfCoincFilter4Th2 = cms.Path(process.phfCoincFilter4Th2)
-process.pphfCoincFilter1Th3 = cms.Path(process.phfCoincFilter1Th3)
-process.pphfCoincFilter2Th3 = cms.Path(process.phfCoincFilter2Th3)
-process.pphfCoincFilter3Th3 = cms.Path(process.phfCoincFilter3Th3)
-process.pphfCoincFilter4Th3 = cms.Path(process.phfCoincFilter4Th3)
-process.pphfCoincFilter5Th3 = cms.Path(process.phfCoincFilter5Th3)
-process.pphfCoincFilter1Th4 = cms.Path(process.phfCoincFilter1Th4)
-process.pphfCoincFilter2Th4 = cms.Path(process.phfCoincFilter2Th4)
-process.pphfCoincFilter3Th4 = cms.Path(process.phfCoincFilter3Th4)
-process.pphfCoincFilter4Th4 = cms.Path(process.phfCoincFilter4Th4)
-process.pphfCoincFilter5Th4 = cms.Path(process.phfCoincFilter5Th4)
-process.pphfCoincFilter1Th5 = cms.Path(process.phfCoincFilter1Th5)
-process.pphfCoincFilter2Th5 = cms.Path(process.phfCoincFilter2Th5)
-process.pphfCoincFilter3Th5 = cms.Path(process.phfCoincFilter3Th5)
-process.pphfCoincFilter4Th5 = cms.Path(process.phfCoincFilter4Th5)
-process.pphfCoincFilter5Th5 = cms.Path(process.phfCoincFilter5Th5)
+# process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
+# process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
+# process.pphfCoincFilter4Th2 = cms.Path(process.phfCoincFilter4Th2)
+# process.pphfCoincFilter1Th3 = cms.Path(process.phfCoincFilter1Th3)
+# process.pphfCoincFilter2Th3 = cms.Path(process.phfCoincFilter2Th3)
+# process.pphfCoincFilter3Th3 = cms.Path(process.phfCoincFilter3Th3)
+# process.pphfCoincFilter4Th3 = cms.Path(process.phfCoincFilter4Th3)
+# process.pphfCoincFilter5Th3 = cms.Path(process.phfCoincFilter5Th3)
+# process.pphfCoincFilter1Th4 = cms.Path(process.phfCoincFilter1Th4)
+# process.pphfCoincFilter2Th4 = cms.Path(process.phfCoincFilter2Th4)
+# process.pphfCoincFilter3Th4 = cms.Path(process.phfCoincFilter3Th4)
+# process.pphfCoincFilter4Th4 = cms.Path(process.phfCoincFilter4Th4)
+# process.pphfCoincFilter5Th4 = cms.Path(process.phfCoincFilter5Th4)
+# process.pphfCoincFilter1Th5 = cms.Path(process.phfCoincFilter1Th5)
+# process.pphfCoincFilter2Th5 = cms.Path(process.phfCoincFilter2Th5)
+# process.pphfCoincFilter3Th5 = cms.Path(process.phfCoincFilter3Th5)
+# process.pphfCoincFilter4Th5 = cms.Path(process.phfCoincFilter4Th5)
+# process.pphfCoincFilter5Th5 = cms.Path(process.phfCoincFilter5Th5)
 process.pAna = cms.EndPath(process.skimanalysis)
 
-#from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
-#process.hltfilter = hltHighLevel.clone(
-#    HLTPaths = [
-#        #"HLT_HIZeroBias_v4",                                                     
-#        "HLT_HIMinimumBias_v2",
-#    ]
-#)
-#process.filterSequence = cms.Sequence(
-#    process.hltfilter
-#)
+from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
+process.hltfilter = hltHighLevel.clone(
+   HLTPaths = [
+       #"HLT_HIZeroBias_v4",
+       "HLT_MinimumBiasHF_OR_BptxAND_v*"
+       # "HLT_HIMinimumBias_v*",
+   ]
+)
+process.filterSequence = cms.Sequence(
+   process.hltfilter
+)
+
+process.superFilterPath = cms.Path(process.filterSequence)
+process.skimanalysis.superFilters = cms.vstring("superFilterPath")
 #
-#process.superFilterPath = cms.Path(process.filterSequence)
-#process.skimanalysis.superFilters = cms.vstring("superFilterPath")
-#
-#for path in process.paths:
-#    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
+for path in process.paths:
+   getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
 

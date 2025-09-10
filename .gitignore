@@ -15,6 +15,10 @@ __init__.py
 /*
 !/*/
 
+RooUnfold/
+HeavyIonsAnalysis/Configuration/test/crab_projects/
+HeavyIonsAnalysis/Configuration/test/crab*
+HeavyIonsAnalysis/Configuration/test/*.root
 # ignore some IDE related files
 *.xcodeproj
 .vscode

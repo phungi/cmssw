@@ -1,5 +1,5 @@
-#ifndef MNguyen_HiInclusiveJetAnalyzer_inclusiveJetAnalyzer_
-#define MNguyen_HiInclusiveJetAnalyzer_inclusiveJetAnalyzer_
+#ifndef MNguyen_HiInclusiveJetSubstructure_inclusiveJetSubstructure_
+#define MNguyen_HiInclusiveJetSubstructure_inclusiveJetSubstructure_
 
 // system include files
 #include <memory>
@@ -7,9 +7,8 @@
 #include <iostream>
 
 // ROOT headers
-#include "TH2.h"
 #include "TTree.h"
-
+#include "TH2.h"
 // user include files
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
@@ -21,10 +20,12 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
-#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "fastjet/contrib/Njettiness.hh"
-#include "DataFormats/JetMatching/interface/JetFlavourInfo.h"
-#include "DataFormats/JetMatching/interface/JetFlavourInfoMatching.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "DataFormats/Candidate/interface/Candidate.h"
+
+
 //
 
 /**\class HiInclusiveJetAnalyzer
@@ -33,11 +34,15 @@
    \date   November 2010
 */
 
-class HiInclusiveJetAnalyzer : public edm::one::EDAnalyzer<edm::one::WatchRuns> {
-public:
-  explicit HiInclusiveJetAnalyzer(const edm::ParameterSet&);
 
-  ~HiInclusiveJetAnalyzer() override;
+
+float delta_phi(float phi1, float phi2);
+class HiInclusiveJetSubstructure : edm::one::EDAnalyzer<edm::one::WatchRuns> {
+public:
+
+  explicit HiInclusiveJetSubstructure(const edm::ParameterSet&);
+
+  ~HiInclusiveJetSubstructure() override;
 
   void analyze(const edm::Event&, const edm::EventSetup&) override;
 
@@ -49,21 +54,8 @@ public:
 private:
   // for reWTA reclustering-----------------------
   bool doWTARecluster_ = false;
-  fastjet::JetDefinition WTAjtDef =
-      fastjet::JetDefinition(fastjet::JetAlgorithm::antikt_algorithm, 2, fastjet::WTA_pt_scheme);
+  fastjet::JetDefinition WTAjtDef = fastjet::JetDefinition(fastjet::JetAlgorithm::antikt_algorithm, 2, fastjet::WTA_pt_scheme);
   //--------------------------------------------
-
-  //int getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandidateCollection *pfCandidateColl);
-  // int getPFJetMuon(const pat::Jet& pfJet, const edm::View<pat::PackedCandidate>* pfCandidateColl);
-
-  //double getPtRel(const reco::PFCandidate& lep, const pat::Jet& jet );
-  // double getPtRel(const pat::PackedCandidate& lep, const pat::Jet& jet);
-
-  // void analyzeSubjets(const reco::Jet& jet);
-  // int getGroomedGenJetIndex(const reco::GenJet& jet) const;
-  // void analyzeRefSubjets(const reco::GenJet& jet);
-  // void analyzeGenSubjets(const reco::GenJet& jet);
-
   void RandomConePtSum(float &cone_eta, float &cone_phi, float &cone_pt, edm::Handle<std::vector<reco::PFCandidate> > &pfCandidateColl);
 
   void IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet,    fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2);
@@ -83,8 +75,8 @@ private:
   void analyzeRefSubjets(const reco::GenJet& jet);
   void analyzeGenSubjets(const reco::GenJet& jet);
   void incrementJetID(const reco::Candidate& it);
+  // float getAboveCharmThresh(reco::TrackRefVector& selTracks, const reco::TrackIPTagInfo& ipData, int sigOrVal);
 
-  int TaggedJet(pat::Jet patjet, edm::Handle<reco::JetTagCollection > jetTags );
 
   edm::InputTag   jetTagLabel_;
   edm::EDGetTokenT<std::vector<reco::Vertex> >       vtxTag_;

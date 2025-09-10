@@ -1,19 +1,29 @@
 /*
   Based on the jet response analyzer
   Modified by Matt Nguyen, November 2010
+  Modified by Leticia Cunqueiro, September 2021
 */
-
-#include "HeavyIonsAnalysis/JetAnalysis/interface/HiInclusiveJetAnalyzer.h"
+#include "HeavyIonsAnalysis/JetAnalysis/interface/HiInclusiveJetSubstructure.h"
+#include "DataFormats/CaloTowers/interface/CaloTowerCollection.h"
 #include "DataFormats/Common/interface/View.h"
 #include "DataFormats/JetReco/interface/CaloJetCollection.h"
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
 #include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
-#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/Utilities/interface/Exception.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+#include "RecoBTag/SecondaryVertex/interface/TrackKinematics.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
+#include "SimDataFormats/HiGenData/interface/GenHIEvent.h"
+// #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+
 #include "fastjet/contrib/Njettiness.hh"
 #include "fastjet/AreaDefinition.hh"
 #include "fastjet/ClusterSequence.hh"
@@ -31,7 +41,21 @@ using namespace std;
 using namespace edm;
 using namespace reco;
 
-HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig) {
+// float delta_phi(float phi1, float phi2){
+//     float result = phi1 - phi2;
+//     while ( result < -M_PI )
+//       {
+//         result += 2.*M_PI;
+//       }
+//     while ( result > M_PI )
+//       {
+//         result -= 2.*M_PI;
+//       }
+//     return result;
+// }
+
+HiInclusiveJetSubstructure::HiInclusiveJetSubstructure(const edm::ParameterSet& iConfig)
+{
   doMatch_ = iConfig.getUntrackedParameter<bool>("matchJets",false);
   jetTag_ = consumes<pat::JetCollection> (iConfig.getParameter<InputTag>("jetTag"));
   matchTag_ = consumes<pat::JetCollection> (iConfig.getUntrackedParameter<InputTag>("matchTag"));
@@ -146,12 +170,14 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   }
 }
 
-HiInclusiveJetAnalyzer::~HiInclusiveJetAnalyzer() {}
+HiInclusiveJetSubstructure::~HiInclusiveJetSubstructure() { 
+}
 
+// void HiInclusiveJetSubstructure::beginRun(const edm::Run& run, const edm::EventSetup & es) {
+// }
 void HiInclusiveJetAnalyzer::beginRun(const edm::Run& run, const edm::EventSetup& es) {}
 void HiInclusiveJetAnalyzer::endRun(const edm::Run& run, const edm::EventSetup& es) {}
-
-void HiInclusiveJetAnalyzer::beginJob() {
+void HiInclusiveJetSubstructure::beginJob() {
   std::cout << "Running job with systematics" << std::endl;
   std::cout << "Doing Charged only: " << doChargedConstOnly_ << std::endl;
   std::cout << "Track efficiency var: " << TrackVariation_ << std::endl;
@@ -343,7 +369,7 @@ void HiInclusiveJetAnalyzer::beginJob() {
 
 }
 
-void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
+void HiInclusiveJetSubstructure::analyze(const Event& iEvent, const EventSetup& iSetup) {
   int event = iEvent.id().event();
   int run = iEvent.id().run();
   int lumi = iEvent.id().luminosityBlock();
@@ -352,7 +378,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
   jets_.evt = event;
   jets_.lumi = lumi;
   // std::cout << ReadJetAsymmMap(1.5, -0.14, *Asymm_map_) << " expect 0.0704101 from map" << std::endl;
-  LogDebug("HiInclusiveJetAnalyzer")<<"START event: "<<event<<" in run "<<run<<endl;
+  LogDebug("HiInclusiveJetSubstructure")<<"START event: "<<event<<" in run "<<run<<endl;
 
     // loop the events
   reco::Vertex::Point vtx(0,0,0);
@@ -460,6 +486,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     jets_.refdyn_isClosestToReco[jets_.nref] = 0;
     jets_.jtdyn_refdyn_dR[jets_.nref] = 0;
 
+
     jets_.refsub11[jets_.nref] = 0;
     jets_.refsub12[jets_.nref] = 0;
     jets_.refsub21[jets_.nref] = 0;
@@ -522,8 +549,8 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
   t->Fill();
   memset(&jets_,0,sizeof jets_);
 }
-
-void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet, fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2)
+//reco::Jet& jet and const reco::GenJet& jet - can replace the two IterDec with one using a template? 
+void HiInclusiveJetSubstructure::IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet, fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2)
 {
   // std::cout << "new jet" << std::endl;
   Double_t map_Corrected_jtpt = jets_.rawpt[jets_.nref];
@@ -645,7 +672,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     float peripheralNeutralChange = assymDelta_jetpt - assymDelta_corePtChange; 
     double jetEnergyDifferenceOutsideCore = 0;
     double JetNeutralEnergyFraction = JetNeutralEnergy/jets_.jtrawE[jets_.nref];
-    // std::cout << jet.pt() << " jet pT " << jet.eta() << " jet eta " << jets_.jtrawE[jets_.nref] << " raw jet E" << std::endl;
+    // std::cout << jet.pt() << " " << jets_.jtpt[jets_.nref] << " jet pT " << jets_.jtrawE[jets_.nref] << " raw jet E" << std::endl;
     // std::cout << " ratio " << JetNeutralEnergyFraction << std::endl;
     // std::cout << "PFE shift below" << std::endl;
     for(auto it = daughters.begin(); it!=daughters.end(); ++it){
@@ -786,8 +813,8 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
       // }
 
       particles.push_back(mypart);
-      // std::cout << " Distance between jet and particle " << mypart.delta_R(myjet) << std::endl;
-      // if(mypart.delta_R(myjet) > rParam ) std::cout << "Larger than jet radius!" << std::endl;
+      std::cout << " Distance between jet and particle " << mypart.delta_R(myjet) << std::endl;
+      if(mypart.delta_R(myjet) > rParam ) std::cout << "Larger than jet radius!" << std::endl;
       double frac_dR = mypart.delta_R(myjet)/rParam;
       double frac_pt = mypart.perp()/myjet.perp();
       intjet_multi++;
@@ -968,7 +995,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
   }
 }
 
-void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet,fastjet::PseudoJet *sub1,fastjet::PseudoJet *sub2)
+void HiInclusiveJetSubstructure::IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet,fastjet::PseudoJet *sub1,fastjet::PseudoJet *sub2)
 {
   Int_t intjet_multi = 0;
   float jet_girth = 0;
@@ -1117,7 +1144,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double 
 }
 // My dream is indefinitely on hold :(
 // template<typename T>
-// void HiInclusiveJetAnalyzer::TemplateDeclustering(Bool_t recoLevel, double groom_type, T& jet)
+// void HiInclusiveJetSubstructure::TemplateDeclustering(Bool_t recoLevel, double groom_type, T& jet)
 // {
 //   TRandom *rand_track_sel = new TRandom3(0);
 //   Int_t intjet_multi = 0;
@@ -1227,14 +1254,14 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double 
 //   }
 // }
 
-// void HiInclusiveJetAnalyzer::ClusterConstituents(std::vector<fastjet::PseudoJet> particles, Bool_t recoLevel){
+// void HiInclusiveJetSubstructure::ClusterConstituents(std::vector<fastjet::PseudoJet> particles, Bool_t recoLevel){
 //   double jet_radius_ca = 1.0;
 //   fastjet::JetDefinition jet_def(fastjet::genkt_algorithm,jet_radius_ca,0,static_cast<fastjet::RecombinationScheme>(0), fastjet::Best);
 
 // }
 
 //maybe there is a more elegant way than the one below for matching...
-void HiInclusiveJetAnalyzer::RecoTruthSplitMatching(std::vector<fastjet::PseudoJet> &constituents_level1, fastjet::PseudoJet &hardest_level2, bool *bool_array, int *hardest_level1_split){
+void HiInclusiveJetSubstructure::RecoTruthSplitMatching(std::vector<fastjet::PseudoJet> &constituents_level1, fastjet::PseudoJet &hardest_level2, bool *bool_array, int *hardest_level1_split){
     //for now only include geometric matching, maybe consider pt/z, Lund plane location, etc...
   float min_dR = std::numeric_limits<float>::max();
   size_t closest_level1 = 0;
@@ -1256,7 +1283,7 @@ void HiInclusiveJetAnalyzer::RecoTruthSplitMatching(std::vector<fastjet::PseudoJ
   }
 }
 
-float HiInclusiveJetAnalyzer::ReadJetAsymmMap(float eta, float phi, TH2F Asymm_map){
+float HiInclusiveJetSubstructure::ReadJetAsymmMap(float eta, float phi, TH2F Asymm_map){
   float result =  Asymm_map.GetBinContent(Asymm_map.GetXaxis()->FindBin(eta),Asymm_map.GetYaxis()->FindBin(phi));
   float high_bound = 0.15;
   float low_bound = -0.15;
@@ -1270,7 +1297,7 @@ float HiInclusiveJetAnalyzer::ReadJetAsymmMap(float eta, float phi, TH2F Asymm_m
   return result;
 }
 
-std::vector<float> HiInclusiveJetAnalyzer::BinBoundsAsymmMap(float eta, float phi, TH2F Asymm_map){
+std::vector<float> HiInclusiveJetSubstructure::BinBoundsAsymmMap(float eta, float phi, TH2F Asymm_map){
   std::vector<float> result;
   float eta_low =  Asymm_map.GetXaxis()->GetBinLowEdge(Asymm_map.GetXaxis()->FindBin(eta));
   float eta_high =  Asymm_map.GetXaxis()->GetBinLowEdge(Asymm_map.GetXaxis()->FindBin(eta)+1);
@@ -1279,7 +1306,7 @@ std::vector<float> HiInclusiveJetAnalyzer::BinBoundsAsymmMap(float eta, float ph
   return result = {eta_low, eta_high, phi_low, phi_high};
 }
 
-void HiInclusiveJetAnalyzer::TruthRecoRecoTruthMatching(){
+void HiInclusiveJetSubstructure::TruthRecoRecoTruthMatching(){
   // std::cout << jets_.jtdyn_split[jets_.nref] << " " << jets_.refdyn_split[jets_.nref] << " numbers of highest splits" << std::endl;
   if( jets_.jtdyn_split[jets_.nref] == std::numeric_limits<int>::min() || jets_.refdyn_split[jets_.nref] == std::numeric_limits<int>::min() || jets_.jtJetConstituent.size() == 0 || jets_.refJetConstituent.size() == 0 ){
     jets_.refdyn_isClosestToReco[jets_.nref] = false;
@@ -1300,7 +1327,7 @@ void HiInclusiveJetAnalyzer::TruthRecoRecoTruthMatching(){
   RecoTruthSplitMatching(jets_.jtJetConstituent,  hardest_T_split, jets_.jtdyn_isClosestToTruth, jets_.jtdyn_split);
 }
 
-int HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandidateCollection *pfCandidateColl)
+int HiInclusiveJetSubstructure::getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandidateCollection *pfCandidateColl)
 {
 
   int pfMuonIndex = -1;
@@ -1322,7 +1349,7 @@ int HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet, const reco::PFCa
   return pfMuonIndex;
 }
 
-void HiInclusiveJetAnalyzer::LookThroughJetSplits(fastjet::PseudoJet jj, int i=1){
+void HiInclusiveJetSubstructure::LookThroughJetSplits(fastjet::PseudoJet jj, int i=1){
   fastjet::PseudoJet j1;
   fastjet::PseudoJet j2;
   // if(i==1)
@@ -1340,7 +1367,7 @@ void HiInclusiveJetAnalyzer::LookThroughJetSplits(fastjet::PseudoJet jj, int i=1
 }
 
 
-double HiInclusiveJetAnalyzer::getPtRel(const reco::PFCandidate& lep, const pat::Jet& jet )
+double HiInclusiveJetSubstructure::getPtRel(const reco::PFCandidate& lep, const pat::Jet& jet )
 {
   float lj_x = jet.p4().px();
   float lj_y = jet.p4().py();
@@ -1364,7 +1391,7 @@ double HiInclusiveJetAnalyzer::getPtRel(const reco::PFCandidate& lep, const pat:
 
 // Recursive function, but this version gets called only the first time
 
-void HiInclusiveJetAnalyzer::saveDaughters(const reco::GenParticle &gen){
+void HiInclusiveJetSubstructure::saveDaughters(const reco::GenParticle &gen){
 
   for(unsigned i = 0; i<gen.numberOfDaughters(); i++){
     const reco::Candidate & daughter = *gen.daughter(i);
@@ -1400,7 +1427,7 @@ void HiInclusiveJetAnalyzer::saveDaughters(const reco::GenParticle &gen){
 }
 
 // This version called for all subsequent calls
-void HiInclusiveJetAnalyzer::saveDaughters(const reco::Candidate &gen){
+void HiInclusiveJetSubstructure::saveDaughters(const reco::Candidate &gen){
 
   for(unsigned i = 0; i<gen.numberOfDaughters(); i++){
     const reco::Candidate & daughter = *gen.daughter(i);
@@ -1437,7 +1464,7 @@ void HiInclusiveJetAnalyzer::saveDaughters(const reco::Candidate &gen){
 }
 
 //--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet& jet) {
+void HiInclusiveJetSubstructure::analyzeSubjets(const reco::Jet& jet) {
 
   std::vector<float> sjpt;
   std::vector<float> sjeta;
@@ -1465,7 +1492,7 @@ void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet& jet) {
 }
 
 //--------------------------------------------------------------------------------------------------
-int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet& jet) const {
+int HiInclusiveJetSubstructure::getGroomedGenJetIndex(const reco::GenJet& jet) const {
 
     //Find closest soft-dropped gen jet
   double drMin = 100;
@@ -1482,7 +1509,7 @@ int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet& jet) const
 }
 
 //--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet& jet) {
+void HiInclusiveJetSubstructure::analyzeRefSubjets(const reco::GenJet& jet) {
 
     //Find closest soft-dropped gen jet
   int imatch = getGroomedGenJetIndex(jet);
@@ -1490,14 +1517,14 @@ void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet& jet) {
 }
 
 //--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeGenSubjets(const reco::GenJet& jet) {
+void HiInclusiveJetSubstructure::analyzeGenSubjets(const reco::GenJet& jet) {
   //Find closest soft-dropped gen jet
   int imatch = getGroomedGenJetIndex(jet);
   double dr = 999.;
 
 }
 
-void HiInclusiveJetAnalyzer::incrementJetID(const reco::Candidate& it){
+void HiInclusiveJetSubstructure::incrementJetID(const reco::Candidate& it){
   if(it.charge()!=0){
     // reco::Track const& track = (**it).pseudoTrack();
     TrackRef trk = it.get<TrackRef>();
@@ -1582,4 +1609,43 @@ void HiInclusiveJetAnalyzer::incrementJetID(const reco::Candidate& it){
   }
 }
 
-DEFINE_FWK_MODULE(HiInclusiveJetAnalyzer);
+//--------------------------------------------------------------------------------------------------
+// float HiInclusiveJetSubstructure::getAboveCharmThresh(TrackRefVector& selTracks, const TrackIPTagInfo& ipData, int sigOrVal)
+// {
+
+//     const double pdgCharmMass = 1.290;
+//     btag::SortCriteria sc;
+//     switch(sigOrVal){
+//         case 1: //2d significance 
+//         sc = reco::btag::IP2DSig;
+//         case 2: //3d significance
+//         sc = reco::btag::IP3DSig;
+//         case 3:
+//         sc = reco::btag::IP2DSig;  //values are not sortable!
+//         case 4:
+//         sc = reco::btag::IP3DSig;
+// 	}
+//     std::vector<std::size_t> indices = ipData.sortedIndexes(sc);
+//     reco::TrackKinematics kin;
+//     for(unsigned int i=0; i<indices.size(); i++){
+//         size_t idx = indices[i];
+//         const Track track = *(selTracks[idx]);
+//         const btag::TrackIPData &data = ipData.impactParameterData()[idx];
+//         kin.add(track);
+//         if(kin.vectorSum().M() > pdgCharmMass){
+//             switch(sigOrVal){
+//                 case 1:
+//                 return data.ip2d.significance();
+//                 case 2:
+//                 return data.ip3d.significance();
+//                 case 3:
+//                 return data.ip2d.value();
+//                 case 4:
+//                 return data.ip3d.value();
+//             }
+//         }
+//     }
+// 	return 0;
+// }
+
+DEFINE_FWK_MODULE(HiInclusiveJetSubstructure);
