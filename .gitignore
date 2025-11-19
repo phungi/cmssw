@@ -15,6 +15,7 @@ __init__.py
 /*
 !/*/
 
+HeavyIonsAnalysis/Configuration/test/*.csv
 RooUnfold/
 HeavyIonsAnalysis/Configuration/test/crab_projects/
 HeavyIonsAnalysis/Configuration/test/crab*

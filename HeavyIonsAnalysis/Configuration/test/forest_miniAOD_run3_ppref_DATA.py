@@ -13,7 +13,8 @@ process.options = cms.untracked.PSet()
 #####################################################################################
 
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
+# process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
 
 #####################################################################################
 # Input source
@@ -22,7 +23,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/data/Run2024J/PPRefSingleMuon3/MINIAOD/PromptReco-v1/000/387/506/00000/f5965c7b-0a25-4d33-b44f-85a4336bb9cd.root'
+        '/store/data/Run2024J/PPRefHardProbes3/MINIAOD/PromptReco-v1/000/387/409/00000/dae85526-3df2-42ee-809c-0d6d17d09e6b.root'
     )
 )
 
@@ -106,8 +107,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 # Track Analyzer
 #########################
 process.load('HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff')
-process.ppTracks.trackEtaMax = cms.untracked.double(3.0)
-process.ppTracks.trackPtMin = cms.untracked.double(0.3)
+# process.ppTracks.trackEtaMax = cms.untracked.double(3.0)
+# process.ppTracks.trackPtMin = cms.untracked.double(0.3)
 #####################################################################################
 
 #####################
@@ -142,15 +143,15 @@ process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPP_cff')
 process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis *
-    process.hiEvtAnalyzer *
+    process.hiEvtAnalyzer
 #    process.hltobject +
-    process.l1object +
-    process.ggHiNtuplizer +
-    process.zdcSequencePP +
-    process.trackSequencePP +
-    process.particleFlowAnalyser +
-    process.unpackedMuons +
-    process.muonAnalyzer
+    # process.l1object +
+    # process.ggHiNtuplizer +
+    # process.zdcSequencePP +
+    # process.trackSequencePP +
+    # process.particleFlowAnalyser +
+    # process.unpackedMuons +
+    # process.muonAnalyzer
 )
 
 
@@ -167,8 +168,8 @@ process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 #####################################################################################
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC 
-jetPtMin = 15
-jetAbsEtaMax = 2.5
+jetPtMin = 20
+jetAbsEtaMax = 2.
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -177,7 +178,7 @@ doBtagging  =  False         # Note that setting to True increases computing tim
 
 # 0 means use original mini-AOD jets, otherwise use R value, e.g., 3,4,8
 # Add all the values you want to process to the list
-jetLabels = ["0"]
+jetLabels = ["4"]
 
 # add candidate tagging for all selected jet radii
 from HeavyIonsAnalysis.JetAnalysis.setupJets_ppRef_cff import candidateBtaggingMiniAOD

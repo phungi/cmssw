@@ -18,13 +18,14 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://eoscms.cern.ch//store/group/phys_heavyions/jviinika/PythiaHydjetRun3_5p36TeV_dijet_ptHat15_100kEvents_miniAOD_2023_08_30/PythiaHydjetDijetRun3/PythiaHydjetRun3_dijet_ptHat15_5p36TeV_miniAOD/230830_165931/0000/pythiaHydjet_miniAOD_11.root'
+        # 'root://eoscms.cern.ch//store/group/phys_heavyions/jviinika/PythiaHydjetRun3_5p36TeV_dijet_ptHat15_100kEvents_miniAOD_2023_08_30/PythiaHydjetDijetRun3/PythiaHydjetRun3_dijet_ptHat15_5p36TeV_miniAOD/230830_165931/0000/pythiaHydjet_miniAOD_11.root'
+        '/store/mc/HINOOSpring25MiniAOD/QCD-dijet_Pthat-15_TuneCP5_OO_5p36TeV_pythia8/MINIAODSIM/150X_mcRun3_2025_forOO_realistic_v7-v2/2520000/d1f329d4-2107-47e4-a6ee-c7e5fd7e8c9c.root'
     ),
 )
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(20)
+    input = cms.untracked.int32(500)
     )
 
 ###############################################################################
@@ -119,15 +120,15 @@ process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 process.forest = cms.Path(
     process.HiForestInfo +
     process.centralityBin +
-    process.hltanalysis +
+    process.hltanalysis
 #    process.hltobject +
 #    process.l1object +
-    process.trackSequencePbPb +
+    # process.trackSequencePbPb +
 #    process.particleFlowAnalyser +
-    process.hiEvtAnalyzer +
-    process.HiGenParticleAna +
-    process.ggHiNtuplizer +
-    process.zdcSequencePbPb
+    # process.hiEvtAnalyzer +
+    # process.HiGenParticleAna +
+    # process.ggHiNtuplizer +
+    # process.zdcSequencePbPb
 #    process.unpackedMuons +
 #    process.muonAnalyzer
     )
@@ -137,7 +138,7 @@ process.forest = cms.Path(
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
 jetPtMin = 15
-jetAbsEtaMax = 2.5
+jetAbsEtaMax = 2.
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -149,10 +150,10 @@ doBtagging  =  False         # Note that setting to True increases computing tim
 # You will need to do reclustering with R-value to get generator level jets without neutrinos
 # Add all the values you want to process to the list
 # These will create collections of CS subtracted jets (only eta dependent background)
-jetLabelsCS = ["4"]
+jetLabelsCS = ["2", "4"]
 
 # For this list, give the R-values for flow subtracted CS jets (eta and phi dependent background)
-jetLabelsFlowCS = ["4"]
+jetLabelsFlowCS = []
 
 # Combine the two lists such that all selected jets can be easily looped over
 # Also add "Flow" tag for the flow jets to distinguish them from non-flow jets

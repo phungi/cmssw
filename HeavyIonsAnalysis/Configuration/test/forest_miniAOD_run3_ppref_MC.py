@@ -22,7 +22,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/user/bharikri/Run3MC_pp/MINIAOD/2024_Mar_21_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0_LLR/Pythia8_ppRef_QCDPhoton30_TuneCP5/2024_Mar_21_step3_RAW2DIGI_MINIAODSIM_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0/240326_082338/0000/step3_pp_673.root'
+        '/store/mc/RunIIIpp5p36Winter24MiniAOD/QCD_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/141X_mcRun3_2024_realistic_ppRef5TeV_v7-v2/140000/01bdbafd-e89b-49bd-ae1e-24b53f8d79a4.root'
     )
 )
 
@@ -128,13 +128,13 @@ process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis *
     process.hiEvtAnalyzer *
-    process.hltobject +
-    process.l1object +
-    process.HiGenParticleAna +
-    process.ggHiNtuplizer +
-    process.trackSequencePP +
-    process.unpackedMuons +
-    process.muonAnalyzer
+    # process.hltobject +
+    process.l1object
+    # process.HiGenParticleAna +
+    # process.ggHiNtuplizer +
+    # process.trackSequencePP +
+    # process.unpackedMuons +
+    # process.muonAnalyzer
 )
 
 #####################################################################################

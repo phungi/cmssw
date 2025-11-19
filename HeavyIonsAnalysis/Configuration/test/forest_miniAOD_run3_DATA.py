@@ -4,7 +4,7 @@
 
 import FWCore.ParameterSet.Config as cms
 from Configuration.Eras.Era_Run3_pp_on_PbPb_2024_cff import Run3_pp_on_PbPb_2024
-process = cms.Process('HiForest',Run3_pp_on_PbPb_2024)
+process = cms.Process('HiForest', Run3_pp_on_PbPb_2024)
 
 ###############################################################################
 
@@ -25,7 +25,9 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/hidata/OORun2025/IonPhysics0/MINIAOD/PromptReco-v1/000/394/154/00000/14792428-42d1-4d08-9578-eed4891a4594.root'
+        # '/store/hidata/OORun2025/IonPhysics0/MINIAOD/PromptReco-v1/000/394/154/00000/14792428-42d1-4d08-9578-eed4891a4594.root'
+        # '/store/hidata/HIRun2024A/HIMinimumBias0/MINIAOD/PromptReco-v1/000/387/757/00000/b5701796-9e14-4abd-9645-dd8569c47d94.root'
+        '/store/hidata/OORun2025/IonPhysics0/MINIAOD/PromptReco-v1/000/394/175/00000/c44c983c-4ce8-4a59-9670-9e51587a10c3.root'
     ), 
 )
 
@@ -97,6 +99,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
+
+
 #process.hiEvtAnalyzer.doCentrality = cms.bool(False)
 process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 
@@ -131,9 +135,16 @@ process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
 process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 process.load('HeavyIonsAnalysis.ZDCAnalysis.FSCAnalyzers_cff')
 
+#########################
+# rho and random cones
+
 process.load("RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi")
 process.load("HeavyIonsAnalysis.JetAnalysis.RhoAnalysis_cff")
 process.load("HeavyIonsAnalysis.JetAnalysis.RandomConeAnalysis_cff")
+
+from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import *
+process.unpackedTracksAndVertices = unpackedTracksAndVertices
+
 
 ###############################################################################
 # main forest sequence
@@ -141,7 +152,7 @@ process.forest = cms.Path(
     process.HiForestInfo +
     process.centralityBin +
     process.hiEvtAnalyzer +
-    process.hltanalysis
+    process.hltanalysis +
     # process.hltobject +
     # process.l1object +
     # process.trackSequencePbPb +
@@ -149,8 +160,9 @@ process.forest = cms.Path(
     # process.ggHiNtuplizer +
     # process.zdcSequencePbPb +
     # process.fscSequence +
-    # process.unpackedMuons +
-    # process.muonAnalyzer +
+    process.unpackedTracksAndVertices +
+    process.unpackedMuons +
+    process.muonAnalyzer 
     # process.akPu4CaloJetAnalyzer
     )
 
@@ -230,21 +242,22 @@ process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 # process.pphfCoincFilter5Th5 = cms.Path(process.phfCoincFilter5Th5)
 process.pAna = cms.EndPath(process.skimanalysis)
 
-from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
-process.hltfilter = hltHighLevel.clone(
-   HLTPaths = [
-       #"HLT_HIZeroBias_v4",
-       "HLT_MinimumBiasHF_OR_BptxAND_v*"
-       # "HLT_HIMinimumBias_v*",
-   ]
-)
-process.filterSequence = cms.Sequence(
-   process.hltfilter
-)
+# from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
+# process.hltfilter = hltHighLevel.clone(
+#    HLTPaths = [
+#        #"HLT_HIZeroBias_v4",
+#        # "HLT_MinimumBiasHF_OR_BptxAND_v*"
+#        "HLT_HIMinimumBiasHF1ANDZDC1nOR_v*"
+#        # "HLT_HIMinimumBias_v*",
+#    ]
+# )
+# process.filterSequence = cms.Sequence(
+#    process.hltfilter
+# )
 
-process.superFilterPath = cms.Path(process.filterSequence)
-process.skimanalysis.superFilters = cms.vstring("superFilterPath")
-#
-for path in process.paths:
-   getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
+# process.superFilterPath = cms.Path(process.filterSequence)
+# process.skimanalysis.superFilters = cms.vstring("superFilterPath")
+# #
+# for path in process.paths:
+#    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
 
