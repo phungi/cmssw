@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from CRABClient.UserUtilities import config
 
-jobTag = "2024_pp_pythia"
+jobTag = "2024PP_embedded_pythia_unmatchedRecoJets"
 config = config()
 config.section_('General')
 config.General.transferOutputs = True

@@ -19,13 +19,17 @@ process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
         # 'root://eoscms.cern.ch//store/group/phys_heavyions/jviinika/PythiaHydjetRun3_5p36TeV_dijet_ptHat15_100kEvents_miniAOD_2023_08_30/PythiaHydjetDijetRun3/PythiaHydjetRun3_dijet_ptHat15_5p36TeV_miniAOD/230830_165931/0000/pythiaHydjet_miniAOD_11.root'
-        '/store/mc/HINOOSpring25MiniAOD/QCD-dijet_Pthat-15_TuneCP5_OO_5p36TeV_pythia8/MINIAODSIM/150X_mcRun3_2025_forOO_realistic_v7-v2/2520000/d1f329d4-2107-47e4-a6ee-c7e5fd7e8c9c.root'
+        # '/store/mc/HINOOSpring25MiniAOD/QCD-dijet_Pthat-15_TuneCP5_OO_5p36TeV_pythia8/MINIAODSIM/150X_mcRun3_2025_forOO_realistic_v7-v2/2520000/d1f329d4-2107-47e4-a6ee-c7e5fd7e8c9c.root',
+        '/store/mc/HINOOSpring25MiniAOD/Dijet_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/NoPU_150X_mcRun3_2025_forOO_realistic_v9-v1/2520000/00d79cc8-0102-4a3e-8693-11fd2eabc383.root'
     ),
+    # skipEvents = cms.untracked.uint32(454),
+    # firstRun = cms.untracked.uint32(1),
+    # firstEvent = cms.untracked.uint32(2716085)
 )
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(500)
+    input = cms.untracked.int32(600)
     )
 
 ###############################################################################
@@ -115,22 +119,31 @@ process.muonAnalyzer.doGen = cms.bool(True)
 process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
 process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 
+
+
+
+########################
+
+process.load("RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi")
+process.load("HeavyIonsAnalysis.JetAnalysis.RhoAnalysis_cff")
+process.load("HeavyIonsAnalysis.JetAnalysis.RandomConeAnalysis_cff")
+
 ###############################################################################
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo +
     process.centralityBin +
+    process.hiEvtAnalyzer +
     process.hltanalysis
-#    process.hltobject +
-#    process.l1object +
-    # process.trackSequencePbPb +
-#    process.particleFlowAnalyser +
-    # process.hiEvtAnalyzer +
-    # process.HiGenParticleAna +
-    # process.ggHiNtuplizer +
-    # process.zdcSequencePbPb
-#    process.unpackedMuons +
-#    process.muonAnalyzer
+#   process.hltobject +
+#   process.l1object +
+#   process.trackSequencePbPb +
+#   process.particleFlowAnalyser +
+#   process.HiGenParticleAna +
+#   process.ggHiNtuplizer +
+#   process.zdcSequencePbPb
+#   process.unpackedMuons +
+#   process.muonAnalyzer
     )
 
 #customisation
@@ -138,7 +151,7 @@ process.forest = cms.Path(
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
 jetPtMin = 15
-jetAbsEtaMax = 2.
+jetAbsEtaMax = 2.5
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -184,6 +197,7 @@ for jetLabel in allJetLabels:
         getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFBtag")
     process.forest += getattr(process,"akCs"+jetLabel+"PFJetAnalyzer")
 
+process.forest += process.hiFJRhoFlowModulationProducer * process.rhoAnalysis * process.randomConeAnalysisR4 * process.randomConeAnalysisR2
 
 #########################
 # Event Selection -> add the needed filters here
@@ -194,4 +208,22 @@ process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilte
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
+
+from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import *
+process.unpackedTracksAndVertices = unpackedTracksAndVertices
+process.load('HeavyIonsAnalysis.VertexAnalysis.pileupvertexfilter_cfi')
+process.pileupvertexfilter.doOO = True
+process.pileupvertexfilter.doNeNe = False
+
+process.PAcollisionEventSelection = cms.Sequence(
+    # process.phfCoincFilterPF2Th4 *
+    # process.PAprimaryVertexFilter *
+    # process.clusterCompatibilityFilter *
+    process.unpackedTracksAndVertices *
+    process.pileupvertexfilter
+    )
+process.OOphfCoincFilterPF2Th4 = cms.Path(process.phfCoincFilterPF2Th4)
+process.pileupVertexFilter = cms.Path(process.PAcollisionEventSelection)
 process.pAna = cms.EndPath(process.skimanalysis)
+
+process.MessageLogger.cerr.FwkReport.reportEvery = 300

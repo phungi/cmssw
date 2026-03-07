@@ -66,19 +66,19 @@ private:
 
   void RandomConePtSum(float &cone_eta, float &cone_phi, float &cone_pt, edm::Handle<std::vector<reco::PFCandidate> > &pfCandidateColl);
 
-  void IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet,    fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2);
-  void IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet, fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2);
+  void IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet);
+  void IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet);
   float ReadJetAsymmMap(float eta, float phi, TH2F Asymm_map);
   std::vector<float> BinBoundsAsymmMap(float eta, float phi, TH2F Asymm_map);
   void RecoTruthSplitMatching(std::vector<fastjet::PseudoJet> &constituents_level1, fastjet::PseudoJet &hardest_level2, bool *bool_array, int *hardest_level1_split);
   void TruthRecoRecoTruthMatching();
+  void matchPLJP(std::vector<float> &match_dR, std::vector<Int_t> &match_idx, std::vector<fastjet::PseudoJet> &level1, std::vector<fastjet::PseudoJet> &level2);
   int getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandidateCollection *pfCandidateColl);
   void LookThroughJetSplits(fastjet::PseudoJet jj, int i);
   double getPtRel(const reco::PFCandidate& lep, const pat::Jet& jet );
 
   void saveDaughters( const reco::GenParticle & gen);
   void saveDaughters( const reco::Candidate & gen);
-  void analyzeSubjets(const reco::Jet& jet);
   int  getGroomedGenJetIndex(const reco::GenJet& jet) const;
   void analyzeRefSubjets(const reco::GenJet& jet);
   void analyzeGenSubjets(const reco::GenJet& jet);
@@ -99,11 +99,8 @@ private:
   edm::EDGetTokenT<GenEventInfoProduct>              eventGenInfoTag_;
   
   std::string                              jetName_; //used as prefix for jet structures
-  edm::EDGetTokenT<edm::View<reco::Jet>>   subjetGenTag_;
   edm::Handle<reco::JetView>               gensubjets_;
-  edm::EDGetTokenT< edm::ValueMap<float> > tokenGenTau1_;
-  edm::EDGetTokenT< edm::ValueMap<float> > tokenGenTau2_;
-  edm::EDGetTokenT< edm::ValueMap<float> > tokenGenTau3_;
+
   edm::EDGetTokenT< edm::ValueMap<float> > tokenGenSym_;
   edm::Handle<edm::ValueMap<float> >       genSymVM_;
   edm::EDGetTokenT< edm::ValueMap<int> >   tokenGenDroppedBranches_;
@@ -134,8 +131,6 @@ private:
 
   bool doChargedConstOnly_;
   bool doHardestSplitMatching_;
-  bool doSubEvent_;
-  bool doSubjetPurity;
   bool dopthatcut;
   double genPtMin_;
   bool doLifeTimeTagging_;
@@ -160,7 +155,6 @@ private:
   bool doGenSym_;
   bool doSubJets_;
   bool doJetConstituents_;
-  bool doGenSubJets_;
 
 
   //Systematics variables
@@ -173,6 +167,7 @@ private:
   double pfNeutralCandidateEnergyScale_;
   double TrackVariation_;
   bool pfNeutralSmear_;
+  bool doFullPLJPmatching_;
 
 
   TTree *t;
@@ -204,83 +199,39 @@ private:
     float vx, vy, vz;
 
     float jtMapPt[MAXJETS] = {0};
-    float rawpt[MAXJETS];
-    float jtrawE[MAXJETS];
-    float jtpt[MAXJETS];
-    float jteta[MAXJETS];
-    float jtphi[MAXJETS];
+    float rawpt[MAXJETS] = {0};
+    float jtrawE[MAXJETS] = {0};
+    float jtpt[MAXJETS] = {0};
+    float jteta[MAXJETS] = {0};
+    float jtphi[MAXJETS] = {0};
 
-    //reWTA reclusted jet axis
-    float WTAeta[MAXJETS];
-    float WTAphi[MAXJETS];
-    float WTAgeneta[MAXJETS];
-    float WTAgenphi[MAXJETS];
+    float jtdyn_var[MAXJETS] = {0};
+    int jtdyn_split[MAXJETS] = {0};
+    float jtdyn_deltaR[MAXJETS] = {0};
+    float jtdyn_kt[MAXJETS] = {0};
+    float jtdyn_eta[MAXJETS] = {0};
+    float jtdyn_phi[MAXJETS] = {0};
+    float jtdyn_z[MAXJETS] = {0};
+    int jt_intjet_multi[MAXJETS] = {0};
+    float jt_girth[MAXJETS] = {0};
+    float jt_girth_new[MAXJETS] = {0};
+    float jt_thrust[MAXJETS] = {0};
+    float jt_LHA[MAXJETS] = {0};
+    float jt_pTD[MAXJETS] = {0};
+    std::vector<std::vector<float>> jt_PLJPkT = {};
+    std::vector<std::vector<float>> jt_PLJPdR = {};
+    std::vector<std::vector<float>> jt_PLJPeta = {};
+    std::vector<std::vector<float>> jt_PLJPphi = {};
 
-    float jty[MAXJETS];
-    float jtpu[MAXJETS];
-    float jtm[MAXJETS];
-    float jtarea[MAXJETS];
+    std::vector<std::vector<float>> PLJP_TtoRmatch_dR = {}, PLJP_RtoTmatch_dR = {};
+    std::vector<std::vector<Int_t>> PLJP_TtoRmatch_idx = {}, PLJP_RtoTmatch_idx = {};
 
+    std::vector<fastjet::PseudoJet> jtJetConstituent = {};
+    std::vector<fastjet::PseudoJet> refJetConstituent = {};
 
-    
-    float jttau1[MAXJETS];
-    float jttau2[MAXJETS];
-    float jttau3[MAXJETS];
-
-    // float jtsym[MAXJETS];
-    // float jtrg[MAXJETS];
-    // float jtdyn_pt1[MAXJETS];
-    // float jtangu[MAXJETS];
-    float jtdyn_var[MAXJETS];
-    int jtdyn_split[MAXJETS];
-    // float jtdyn_theta[MAXJETS];
-    float jtdyn_deltaR[MAXJETS];
-    float jtdyn_kt[MAXJETS];
-    float jtdyn_eta[MAXJETS];
-    float jtdyn_phi[MAXJETS];
-    float jtdyn_z[MAXJETS];
-    int jt_intjet_multi[MAXJETS];
-    float jt_girth[MAXJETS];
-    float jt_girth_new[MAXJETS];
-    float jt_thrust[MAXJETS];
-    float jt_LHA[MAXJETS];
-    float jt_pTD[MAXJETS];
-    std::vector<std::vector<float>> jt_PLJPkT;
-    std::vector<std::vector<float>> jt_PLJPdR;
-    std::vector<std::vector<float>> jt_PLJPeta;
-    std::vector<std::vector<float>> jt_PLJPphi;
-
-    std::vector<std::vector<float>> jtSubJetPt;
-    std::vector<std::vector<float>> jtSubJetEta;
-    std::vector<std::vector<float>> jtSubJetPhi;
-    std::vector<std::vector<float>> jtSubJetM;
-
-    std::vector<fastjet::PseudoJet> jtJetConstituent;
-    // std::vector<std::vector<float>> jtJetConstituentPhi;
-    // std::vector<int> jtJetConstituentHardestSplitN;
-    std::vector<fastjet::PseudoJet> refJetConstituent;
-    // std::vector<std::vector<float>> refJetConstituentPhi;
-    // std::vector<int> refJetConstituentHardestSplitN;
-
-    bool triggerJetInAcceptance;
-
-    bool jtdyn_isClosestToTruth[MAXJETS];
-    bool refdyn_isClosestToReco[MAXJETS];
-    float jtdyn_refdyn_dR[MAXJETS];
-
-    std::vector<std::vector<int>> jtConstituentsId;
-    std::vector<std::vector<float>> jtConstituentsE;
-    std::vector<std::vector<float>> jtConstituentsPt;
-    std::vector<std::vector<float>> jtConstituentsEta;
-    std::vector<std::vector<float>> jtConstituentsPhi;
-    std::vector<std::vector<float>> jtConstituentsM;
-    std::vector<std::vector<int>> jtSDConstituentsId;
-    std::vector<std::vector<float>> jtSDConstituentsE;
-    std::vector<std::vector<float>> jtSDConstituentsPt;
-    std::vector<std::vector<float>> jtSDConstituentsEta;
-    std::vector<std::vector<float>> jtSDConstituentsPhi;
-    std::vector<std::vector<float>> jtSDConstituentsM;
-
+    bool jtdyn_isClosestToTruth[MAXJETS] = {0};
+    bool refdyn_isClosestToReco[MAXJETS] = {0};
+    float jtdyn_refdyn_dR[MAXJETS] = {0};
 
     float trackMax[MAXJETS] = {0};
     float trackSum[MAXJETS] = {0};
@@ -327,244 +278,80 @@ private:
     float signalChargedSum[MAXJETS] = {0};
     float signalHardSum[MAXJETS] = {0};
     // Update by Raghav, modified to take it from the towers
-    float hcalSum[MAXJETS];
-    float ecalSum[MAXJETS];
+    float hcalSum[MAXJETS] = {0};
+    float ecalSum[MAXJETS] = {0};
 
-    float fHPD[MAXJETS];
-    float fRBX[MAXJETS];
-    int n90[MAXJETS];
-    float fSubDet1[MAXJETS];
-    float fSubDet2[MAXJETS];
-    float fSubDet3[MAXJETS];
-    float fSubDet4[MAXJETS];
-    float restrictedEMF[MAXJETS];
-    int nHCAL[MAXJETS];
-    int nECAL[MAXJETS];
-    float apprHPD[MAXJETS];
-    float apprRBX[MAXJETS];
+    float fHPD[MAXJETS] = {0};
+    float fRBX[MAXJETS] = {0};
+    int n90[MAXJETS] = {0};
+    float fSubDet1[MAXJETS] = {0};
+    float fSubDet2[MAXJETS] = {0};
+    float fSubDet3[MAXJETS] = {0};
+    float fSubDet4[MAXJETS] = {0};
+    float restrictedEMF[MAXJETS] = {0};
+    int nHCAL[MAXJETS] = {0};
+    int nECAL[MAXJETS] = {0};
+    float apprHPD[MAXJETS] = {0};
+    float apprRBX[MAXJETS] = {0};
 
-    //    int n90[MAXJETS];
-    int n2RPC[MAXJETS];
-    int n3RPC[MAXJETS];
-    int nRPC[MAXJETS];
+    //    int n90[MAXJETS] = {0};
+    int n2RPC[MAXJETS] = {0};
+    int n3RPC[MAXJETS] = {0};
+    int nRPC[MAXJETS] = {0};
 
-    float fEB[MAXJETS];
-    float fEE[MAXJETS];
-    float fHB[MAXJETS];
-    float fHE[MAXJETS];
-    float fHO[MAXJETS];
-    float fLong[MAXJETS];
-    float fShort[MAXJETS];
-    float fLS[MAXJETS];
-    float fHFOOT[MAXJETS];
+    float fEB[MAXJETS] = {0};
+    float fEE[MAXJETS] = {0};
+    float fHB[MAXJETS] = {0};
+    float fHE[MAXJETS] = {0};
+    float fHO[MAXJETS] = {0};
+    float fLong[MAXJETS] = {0};
+    float fShort[MAXJETS] = {0};
+    float fLS[MAXJETS] = {0};
+    float fHFOOT[MAXJETS] = {0};
 
-    int subid[MAXJETS];
-
-    float matchedPt[MAXJETS];
-    float matchedRawPt[MAXJETS];
-    float matchedR[MAXJETS];
-    float matchedPu[MAXJETS];
-    int matchedHadronFlavor[MAXJETS];
-    int matchedPartonFlavor[MAXJETS];
-
-    float discr_csvV1[MAXJETS];
-    float discr_csvV2[MAXJETS];
-    float discr_deepCSV[MAXJETS];
-    float discr_muByIp3[MAXJETS];
-    float discr_muByPt[MAXJETS];
-    float discr_prob[MAXJETS];
-    float discr_probb[MAXJETS];
-    float discr_tcHighEff[MAXJETS];
-    float discr_tcHighPur[MAXJETS];
-    float discr_ssvHighEff[MAXJETS];
-    float discr_ssvHighPur[MAXJETS];
-
-    float ndiscr_ssvHighEff[MAXJETS];
-    float ndiscr_ssvHighPur[MAXJETS];
-    float ndiscr_csvV1[MAXJETS];
-    float ndiscr_csvV2[MAXJETS];
-    float ndiscr_muByPt[MAXJETS];
-
-    float pdiscr_csvV1[MAXJETS];
-    float pdiscr_csvV2[MAXJETS];
-
-    int nsvtx[MAXJETS];
-    int svtxntrk[MAXJETS];
-    float svtxdl[MAXJETS];
-    float svtxdls[MAXJETS];
-    float svtxdl2d[MAXJETS];
-    float svtxdls2d[MAXJETS];
-    float svtxm[MAXJETS];
-    float svtxpt[MAXJETS];
-    float svtxmcorr[MAXJETS];
-    float svtxnormchi2[MAXJETS];
-    float svJetDeltaR[MAXJETS];
-    float svtxTrkSumChi2[MAXJETS];
-    int svtxTrkNetCharge[MAXJETS];
-    int svtxNtrkInCone[MAXJETS];
-
-    int nIPtrk[MAXJETS];
-    int nselIPtrk[MAXJETS];
-
-    int nIP;
-    int ipJetIndex[MAXTRACKS];
-    float ipPt[MAXTRACKS];
-    float ipEta[MAXTRACKS];
-    float ipDxy[MAXTRACKS];
-    float ipDz[MAXTRACKS];
-    float ipChi2[MAXTRACKS];
-    int ipNHit[MAXTRACKS];
-    int ipNHitPixel[MAXTRACKS];
-    int ipNHitStrip[MAXTRACKS];
-    bool ipIsHitL1[MAXTRACKS];
-    float ipProb0[MAXTRACKS];
-    float ipProb1[MAXTRACKS];
-    float ip2d[MAXTRACKS];
-    float ip2dSig[MAXTRACKS];
-    float ip3d[MAXTRACKS];
-    float ip3dSig[MAXTRACKS];
-    float ipDist2Jet[MAXTRACKS];
-    float ipDist2JetSig[MAXTRACKS];
-    float ipClosest2Jet[MAXTRACKS];
-  
-    float trackPtRel[MAXTRACKS];
-    float trackPtRatio[MAXTRACKS];
-    float trackPPar[MAXTRACKS];
-    float trackPParRatio[MAXTRACKS];
-    float trackDeltaR[MAXTRACKS];
-
-    float trackSip2dSigAboveCharm[MAXJETS];
-    float trackSip2dValAboveCharm[MAXJETS];
-    float trackSip3dValAboveCharm[MAXJETS];
-    float trackSip3dSigAboveCharm[MAXJETS];
-    float trackSumJetDeltaR[MAXJETS];
-
-    float mue[MAXJETS];
-    float mupt[MAXJETS];
-    float mueta[MAXJETS];
-    float muphi[MAXJETS];
-    float mudr[MAXJETS];
-    float muptrel[MAXJETS];
-    int muchg[MAXJETS];
-
-    float refpt[MAXJETS];
-    float refeta[MAXJETS];
-    float refphi[MAXJETS];
-    float refm[MAXJETS];
-    float refarea[MAXJETS];
-    float refy[MAXJETS];
-    float reftau1[MAXJETS];
-    float reftau2[MAXJETS];
-    float reftau3[MAXJETS];
-    float refsym[MAXJETS];
-    // float refrg[MAXJETS];
-    // float refdyn_pt1[MAXJETS];
-    // float refangu[MAXJETS];
+    float refpt[MAXJETS] = {0};
+    float refeta[MAXJETS] = {0};
+    float refphi[MAXJETS] = {0};
+    float refm[MAXJETS] = {0};
+    float refarea[MAXJETS] = {0};
+    float refy[MAXJETS] = {0};
+    float reftau1[MAXJETS] = {0};
+    float reftau2[MAXJETS] = {0};
+    float reftau3[MAXJETS] = {0};
+    float refsym[MAXJETS] = {0};
+    // float refrg[MAXJETS] = {0};
+    // float refdyn_pt1[MAXJETS] = {0};
+    // float refangu[MAXJETS] = {0};
     
-    float refdyn_var[MAXJETS];
-    int refdyn_split[MAXJETS];
-    // float refdyn_theta[MAXJETS];
-    float refdyn_deltaR[MAXJETS];
-    float refdyn_kt[MAXJETS];
-    float refdyn_eta[MAXJETS];
-    float refdyn_phi[MAXJETS];
-    float refdyn_z[MAXJETS];
-    int ref_intjet_multi[MAXJETS];
-    float ref_girth[MAXJETS];
-    float ref_girth_new[MAXJETS];
-    float ref_thrust[MAXJETS];
-    float ref_LHA[MAXJETS];
-    float ref_pTD[MAXJETS];
+    float refdyn_var[MAXJETS] = {0};
+    int refdyn_split[MAXJETS] = {0};
+    // float refdyn_theta[MAXJETS] = {0};
+    float refdyn_deltaR[MAXJETS] = {0};
+    float refdyn_kt[MAXJETS] = {0};
+    float refdyn_eta[MAXJETS] = {0};
+    float refdyn_phi[MAXJETS] = {0};
+    float refdyn_z[MAXJETS] = {0};
+    int ref_intjet_multi[MAXJETS] = {0};
+    float ref_girth[MAXJETS] = {0};
+    float ref_girth_new[MAXJETS] = {0};
+    float ref_thrust[MAXJETS] = {0};
+    float ref_LHA[MAXJETS] = {0};
+    float ref_pTD[MAXJETS] = {0};
     std::vector<std::vector<float>> ref_PLJPkT = {};
     std::vector<std::vector<float>> ref_PLJPdR = {};
     std::vector<std::vector<float>> ref_PLJPeta = {};
     std::vector<std::vector<float>> ref_PLJPphi = {};
-    std::vector<float> ref_test_vec = {};
 
-    float refsub11[MAXJETS];
-    float refsub12[MAXJETS];
-    float refsub21[MAXJETS];
-    float refsub22[MAXJETS];
-    float refdphijt[MAXJETS];
-    float refdrjt[MAXJETS];
-    float refparton_pt[MAXJETS];
-    int refparton_flavor[MAXJETS];
-    int refparton_flavorForB[MAXJETS];
-
-    float refptG[MAXJETS];
-    float refetaG[MAXJETS];
-    float refphiG[MAXJETS];
-    float refmG[MAXJETS];
-    std::vector<std::vector<float>> refSubJetPt;
-    std::vector<std::vector<float>> refSubJetEta;
-    std::vector<std::vector<float>> refSubJetPhi;
-    std::vector<std::vector<float>> refSubJetM;
-    
-    std::vector<std::vector<int>> refConstituentsId;
-    std::vector<std::vector<float>> refConstituentsE;
-    std::vector<std::vector<float>> refConstituentsPt;
-    std::vector<std::vector<float>> refConstituentsEta;
-    std::vector<std::vector<float>> refConstituentsPhi;
-    std::vector<std::vector<float>> refConstituentsM;
-    std::vector<std::vector<int>> refSDConstituentsId;
-    std::vector<std::vector<float>> refSDConstituentsE;
-    std::vector<std::vector<float>> refSDConstituentsPt;
-    std::vector<std::vector<float>> refSDConstituentsEta;
-    std::vector<std::vector<float>> refSDConstituentsPhi;
-    std::vector<std::vector<float>> refSDConstituentsM;
+    float refparton_pt[MAXJETS] = {0};
+    int refparton_flavor[MAXJETS] = {0};
+    int refparton_flavorForB[MAXJETS] = {0};
 
     float pthat;
     int beamId1, beamId2;
-    int ngen;
-    int genmatchindex[MAXJETS];
-    float genpt[MAXJETS];
-    float geneta[MAXJETS];
-    float genphi[MAXJETS];
-    float genm[MAXJETS];
-    float geny[MAXJETS];
-    float gentau1[MAXJETS];
-    float gentau2[MAXJETS];
-    float gentau3[MAXJETS];
-    float gendphijt[MAXJETS];
-    float gendrjt[MAXJETS];
-    int gensubid[MAXJETS];
 
-    float genptG[MAXJETS];
-    float genetaG[MAXJETS];
-    float genphiG[MAXJETS];
-    float genmG[MAXJETS];
-    std::vector<std::vector<float>> genSubJetPt;
-    std::vector<std::vector<float>> genSubJetEta;
-    std::vector<std::vector<float>> genSubJetPhi;
-    std::vector<std::vector<float>> genSubJetM;
-    std::vector<std::vector<float>> genSubJetArea;
-    float gensym[MAXJETS];
-    int   gendroppedBranches[MAXJETS];
-    
-    std::vector<std::vector<int>> genConstituentsId;
-    std::vector<std::vector<float>> genConstituentsE;
-    std::vector<std::vector<float>> genConstituentsPt;
-    std::vector<std::vector<float>> genConstituentsEta;
-    std::vector<std::vector<float>> genConstituentsPhi;
-    std::vector<std::vector<float>> genConstituentsM;
-    std::vector<std::vector<int>> genSDConstituentsId;
-    std::vector<std::vector<float>> genSDConstituentsE;
-    std::vector<std::vector<float>> genSDConstituentsPt;
-    std::vector<std::vector<float>> genSDConstituentsEta;
-    std::vector<std::vector<float>> genSDConstituentsPhi;
-    std::vector<std::vector<float>> genSDConstituentsM;
+    float gensym[MAXJETS] = {0};
+    int   gendroppedBranches[MAXJETS] = {0};
 
-    int bMult;
-    int bJetIndex[MAXBFRAG];
-    int bStatus[MAXBFRAG];
-    int bPdg[MAXBFRAG];
-    int bChg[MAXBFRAG];
-    float bVx[MAXBFRAG];
-    float bVy[MAXBFRAG];
-    float bVz[MAXBFRAG];
-    float bPt[MAXBFRAG];
-    float bEta[MAXBFRAG];
-    float bPhi[MAXBFRAG];
   };
 
   JRA jets_;

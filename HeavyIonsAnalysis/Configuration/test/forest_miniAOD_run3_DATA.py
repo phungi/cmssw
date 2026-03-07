@@ -33,7 +33,7 @@ process.source = cms.Source("PoolSource",
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(500)
+    input = cms.untracked.int32(1000)
     )
 
 ###############################################################################
@@ -152,7 +152,7 @@ process.forest = cms.Path(
     process.HiForestInfo +
     process.centralityBin +
     process.hiEvtAnalyzer +
-    process.hltanalysis +
+    process.hltanalysis
     # process.hltobject +
     # process.l1object +
     # process.trackSequencePbPb +
@@ -160,9 +160,9 @@ process.forest = cms.Path(
     # process.ggHiNtuplizer +
     # process.zdcSequencePbPb +
     # process.fscSequence +
-    process.unpackedTracksAndVertices +
-    process.unpackedMuons +
-    process.muonAnalyzer 
+    # process.unpackedTracksAndVertices +
+    # process.unpackedMuons +
+    # process.muonAnalyzer 
     # process.akPu4CaloJetAnalyzer
     )
 
@@ -170,7 +170,7 @@ process.forest = cms.Path(
 
 # Select the types of jets filled
 matchJets = False             # Enables q/g and heavy flavor jet identification in MC 
-jetPtMin = 20
+jetPtMin = 40
 jetAbsEtaMax = 2
 
 # Choose which additional information is added to jet trees
@@ -222,8 +222,25 @@ process.forest += process.hiFJRhoFlowModulationProducer * process.rhoAnalysis * 
 process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
-# process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
+
+from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import *
+process.unpackedTracksAndVertices = unpackedTracksAndVertices
+process.load('HeavyIonsAnalysis.VertexAnalysis.pileupvertexfilter_cfi')
+process.pileupvertexfilter.doOO = True
+process.pileupvertexfilter.doNeNe = False
+
+process.PAcollisionEventSelection = cms.Sequence(
+    # process.phfCoincFilterPF2Th4 *
+    # process.PAprimaryVertexFilter *
+    # process.clusterCompatibilityFilter *
+    process.unpackedTracksAndVertices *
+    process.pileupvertexfilter
+    )
+
+process.pileupVertexFilter = cms.Path(process.PAcollisionEventSelection)
+process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
 # process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
+process.OOphfCoincFilterPF2Th4 = cms.Path(process.phfCoincFilterPF2Th4)
 # process.pphfCoincFilter4Th2 = cms.Path(process.phfCoincFilter4Th2)
 # process.pphfCoincFilter1Th3 = cms.Path(process.phfCoincFilter1Th3)
 # process.pphfCoincFilter2Th3 = cms.Path(process.phfCoincFilter2Th3)
@@ -242,22 +259,25 @@ process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 # process.pphfCoincFilter5Th5 = cms.Path(process.phfCoincFilter5Th5)
 process.pAna = cms.EndPath(process.skimanalysis)
 
-# from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
-# process.hltfilter = hltHighLevel.clone(
-#    HLTPaths = [
-#        #"HLT_HIZeroBias_v4",
-#        # "HLT_MinimumBiasHF_OR_BptxAND_v*"
-#        "HLT_HIMinimumBiasHF1ANDZDC1nOR_v*"
-#        # "HLT_HIMinimumBias_v*",
-#    ]
-# )
-# process.filterSequence = cms.Sequence(
-#    process.hltfilter
-# )
+from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
+process.hltfilter = hltHighLevel.clone(
+   HLTPaths = [
+       #"HLT_HIZeroBias_v4",
+       # "HLT_MinimumBiasHF_OR_BptxAND_v*"
+       "HLT_MinimumBiasHF_OR_BptxAND_v*",
+       "HLT_OxyL1SingleJet*",
+       "HLT_OxyL1SingleEG*"
+       # "HLT_HIMinimumBias_v*",
+   ]
+)
+process.filterSequence = cms.Sequence(
+   process.hltfilter
+)
 
-# process.superFilterPath = cms.Path(process.filterSequence)
-# process.skimanalysis.superFilters = cms.vstring("superFilterPath")
-# #
-# for path in process.paths:
-#    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
+process.superFilterPath = cms.Path(process.filterSequence)
+process.skimanalysis.superFilters = cms.vstring("superFilterPath")
+#
+for path in process.paths:
+   getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
 
+process.MessageLogger.cerr.FwkReport.reportEvery = 300

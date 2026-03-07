@@ -43,26 +43,15 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   trackQuality_ = iConfig.getUntrackedParameter<string>("trackQuality","highPurity");
 
   jetName_ = iConfig.getUntrackedParameter<string>("jetName");
-  doGenTaus_ = iConfig.getUntrackedParameter<bool>("doGenTaus",0);
   doGenSym_ = iConfig.getUntrackedParameter<bool>("doGenSym",0);
   doSubJets_ = iConfig.getUntrackedParameter<bool>("doSubJets",0);
 
   doBtagging_ = iConfig.getUntrackedParameter<bool>("doBtagging", false);
   doJetConstituents_ = iConfig.getUntrackedParameter<bool>("doJetConstituents", false);
-  doGenSubJets_ = iConfig.getUntrackedParameter<bool>("doGenSubJets", false);
-  if (doGenSubJets_)
-    subjetGenTag_ = consumes<reco::JetView> (iConfig.getUntrackedParameter<InputTag>("subjetGenTag"));
-  // subjetGenTag_ = consumes<reco::JetView> (iConfig.getUntrackedParameter<InputTag>("subjetGenTag"));
 
   //reWTA reclustering
   doWTARecluster_ = iConfig.getUntrackedParameter<bool>("doWTARecluster", false);
-/*
-  if(doGenTaus_){
-    tokenGenTau1_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau1"));
-    tokenGenTau2_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau2"));
-    tokenGenTau3_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau3"));
-  }
-*/
+
   if (doGenSym_){
     tokenGenSym_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genSym"));
     tokenGenDroppedBranches_ = consumes<edm::ValueMap<int> >(iConfig.getParameter<edm::InputTag>("genDroppedBranches"));
@@ -115,7 +104,6 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     genParticleSrc_ = consumes<reco::GenParticleCollection>(iConfig.getUntrackedParameter<edm::InputTag>("genParticles"));
   }
 
-  doSubEvent_ = 0;
   doChargedConstOnly_ = iConfig.getUntrackedParameter<bool>("doChargedConstOnly",0);
   TrackVariation_ = 1;
   pfChargedCandidateEnergyScale_ = 1;
@@ -141,10 +129,9 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     TrackVariation_ = iConfig.getUntrackedParameter<double>("TrackVariation",0.);
 
     genPtMin_ = iConfig.getUntrackedParameter<double>("genPtMin",10);
-    doSubEvent_ = iConfig.getUntrackedParameter<bool>("doSubEvent",0);
-    doSubjetPurity = iConfig.getUntrackedParameter<bool>("doSubjetPurity",0);
     dopthatcut = iConfig.getUntrackedParameter<bool>("dopthatcut",0);
     doHardestSplitMatching_ = iConfig.getUntrackedParameter<bool>("doHardestSplitMatching",0);
+    doFullPLJPmatching_ = iConfig.getUntrackedParameter<bool>("doFullPLJPmatching",0);
   }
 }
 
@@ -274,8 +261,6 @@ void HiInclusiveJetAnalyzer::beginJob() {
     t->Branch("jt_PLJPeta",&jets_.jt_PLJPeta);
     t->Branch("jt_PLJPphi",&jets_.jt_PLJPphi);
   }
-  t->Branch("triggerJetInAcceptance", &jets_.triggerJetInAcceptance, "triggerJetInAcceptance/O");
-  // t->Branch("jtangu",jets_.jtangu,"jtangu[nref]/F");
 
   if(isMC_){
     if (useHepMC_) {
@@ -310,6 +295,13 @@ void HiInclusiveJetAnalyzer::beginJob() {
     t->Branch("ref_thrust", jets_.ref_thrust,"ref_thrust[nref]/I");
     t->Branch("ref_LHA", jets_.ref_LHA,"ref_LHA[nref]/I");
     t->Branch("ref_pTD", jets_.ref_pTD,"ref_pTD[nref]/I");
+    if(doFullPLJPmatching_){
+      t->Branch("jt_PLJP_RtoTmatch_idx",&jets_.PLJP_RtoTmatch_idx);
+      t->Branch("jt_PLJP_TtoRmatch_idx",&jets_.PLJP_TtoRmatch_idx);
+      t->Branch("jt_PLJP_RtoTmatch_dR",&jets_.PLJP_RtoTmatch_dR);
+      t->Branch("jt_PLJP_TtoRmatch_dR",&jets_.PLJP_TtoRmatch_dR);
+    }
+
     if(doPrimaryLJPTruth_){
       t->Branch("ref_PLJPkT",&jets_.ref_PLJPkT);
       t->Branch("ref_PLJPdR",&jets_.ref_PLJPdR);
@@ -317,20 +309,10 @@ void HiInclusiveJetAnalyzer::beginJob() {
       t->Branch("ref_PLJPphi",&jets_.ref_PLJPphi);
     }
     
-
-    if(doSubjetPurity){
-      t->Branch("refsub11",jets_.refsub11,"sub11[nref]/F");
-      t->Branch("refsub12",jets_.refsub12,"sub12[nref]/F");
-      t->Branch("refsub21",jets_.refsub21,"sub21[nref]/F");
-      t->Branch("refsub22",jets_.refsub22,"sub22[nref]/F");
-    }
     t->Branch("refparton_pt",jets_.refparton_pt,"refparton_pt[nref]/F");
     t->Branch("refparton_flavor",jets_.refparton_flavor,"refparton_flavor[nref]/I");
   }    
 
-  if(doSubEvent_){
-    t->Branch("subid",jets_.subid,"subid[nref]/I");
-  }
   //declare asymmetry map here so we don't have to generate it every time the function is called
   float x[83] = {-5.191, -4.889, -4.716, -4.538, -4.363, -4.191, -4.013, -3.839, -3.664, -3.489, -3.314, -3.139, -2.964, -2.853, -2.65, -2.5, -2.322, -2.172, -2.043, -1.93, -1.83, -1.74, -1.653, -1.566, -1.479, -1.392, -1.305, -1.218, -1.131, -1.044, -0.957, -0.879, -0.783, -0.696, -0.609, -0.522, -0.435, -0.348, -0.261, -0.174, -0.087, 0, 0.087, 0.174, 0.261, 0.348, 0.435, 0.522, 0.609, 0.696, 0.783, 0.879, 0.957, 1.044, 1.131, 1.218, 1.305, 1.392, 1.479, 1.566, 1.653, 1.74, 1.83, 1.93, 2.043, 2.172, 2.322, 2.5, 2.65, 2.853, 2.964, 3.139, 3.314, 3.489, 3.664, 3.839, 4.013, 4.191, 4.363, 4.538, 4.716, 4.889, 5.191};
   float y[73] = {-3.14159, -3.05433, -2.96706, -2.87979, -2.79253, -2.70526, -2.61799, -2.53073, -2.44346, -2.35619, -2.26893, -2.18166, -2.0944, -2.00713, -1.91986, -1.8326, -1.74533, -1.65806, -1.5708, -1.48353, -1.39626, -1.309, -1.22173, -1.13446, -1.0472, -0.959931, -0.872665, -0.785398, -0.698132, -0.610865, -0.523599, -0.436332, -0.349066, -0.261799, -0.174533, -0.0872665, 0, 0.0872665, 0.174533, 0.261799, 0.349066, 0.436332, 0.523599, 0.610865, 0.698132, 0.785398, 0.872665, 0.959931, 1.0472, 1.13446, 1.22173, 1.309, 1.39626, 1.48353, 1.5708, 1.65806, 1.74533, 1.8326, 1.91986, 2.00713, 2.0944, 2.18166, 2.26893, 2.35619, 2.44346, 2.53073, 2.61799, 2.70526, 2.79253, 2.87979, 2.96706, 3.05433, 3.14159};
@@ -403,18 +385,20 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
   // std::cout << "Checking jets inside the range " << jetAbsEtaMax_-rParam << " for radius parameter " << rParam << std::endl;
   // if(doChargedConstOnly_) std::cout << "Doing only charged jet constituents!" << std::endl;
   // else std::cout << "Doing ALL jet constituents!" << std::endl;
-  jets_.triggerJetInAcceptance = false;
     // std::cout << "Number of jets: " << jets->size() << std::endl;
   for(unsigned int j = 0; j < jets->size(); ++j){
     const pat::Jet& jet = (*jets)[j];
     auto pt = useRawPt_ ? jet.correctedJet("Uncorrected").pt() : jet.pt();
+    // std::cout << "Looping, found jet of pt=" << jet.pt() << std::endl;
     if(pt < jetPtMin_) continue;
+    // if(isMC_){
+    //   const reco::GenJet * genjet = jet.genJet();
+    //   if(!genjet) continue;
+    //   if(dopthatcut) if(pthat<0.35*genjet->pt()) continue;
+    // }
     // if(std::abs(jet.eta()) > jetAbsEtaMax_-rParam) continue;
     // std::cout << "Raw pt: " << jet.correctedJet("Uncorrected").pt() << " corrected: " << jet.pt() << " eta: " << jet.eta() << std::endl;
     //assume highest jet in event is also the trigger object, check if it's within the eta acceptance above
-    if(j==0){ 
-      jets_.triggerJetInAcceptance = true;
-    }
 
     jets_.rawpt[jets_.nref] = jet.correctedJet("Uncorrected").pt();
     jets_.jtrawE[jets_.nref] = jet.correctedJet("Uncorrected").energy();
@@ -434,14 +418,14 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     jets_.jtdyn_kt[jets_.nref] = 0;
     jets_.jtdyn_z[jets_.nref] = 0;
 
-    fastjet::PseudoJet *sub1Gen = new fastjet::PseudoJet();
-    fastjet::PseudoJet *sub2Gen = new fastjet::PseudoJet();
-    fastjet::PseudoJet *sub1Hyb = new fastjet::PseudoJet();
-    fastjet::PseudoJet *sub2Hyb = new fastjet::PseudoJet();
-
     // std::cout << jets_.neutralN[jets_.nref] << " Neutral number before IDR " << jets_.neutralSum[jets_.nref] << std::endl;
+    if(doFullPLJPmatching_ or doHardestSplitMatching_){
+        jets_.jtJetConstituent = {};
+        jets_.refJetConstituent = {};
+      }
+    IterativeDeclusteringRec(groom_type, groom_combine, jet);
 
-    IterativeDeclusteringRec(groom_type, groom_combine, jet, sub1Hyb, sub2Hyb);
+    // std::cout << " Constituents in the jet emissions " << jets_.jtJetConstituent.size() << std::endl;
     // std::cout << jets_.neutralN[jets_.nref] << " Neutral number after IDR " << jets_.neutralSum[jets_.nref] << std::endl;
 
     jets_.refpt[jets_.nref] = 0;
@@ -462,16 +446,40 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     jets_.refdyn_isClosestToReco[jets_.nref] = 0;
     jets_.jtdyn_refdyn_dR[jets_.nref] = 0;
 
-    jets_.refsub11[jets_.nref] = 0;
-    jets_.refsub12[jets_.nref] = 0;
-    jets_.refsub21[jets_.nref] = 0;
-    jets_.refsub22[jets_.nref] = 0;
     // std::cout << jets_.jtJetConstituent.size() << " " << jets_.refJetConstituent.size() << " sizes of consts" << std::endl;
     if(isMC_){
       const reco::GenJet * genjet = jet.genJet();
-      if(!genjet) continue;
-
-      if(jet.genParton()){
+      if(!genjet or (genjet and dopthatcut and pthat<0.35*genjet->pt())){
+        // std::cout << jet.pt() << " does not have a truth partner!" << std::endl;
+        jets_.refdyn_split[jets_.nref] = std::numeric_limits<int>::min();
+        jets_.refdyn_eta[jets_.nref] = -std::numeric_limits<double>::max();
+        jets_.refdyn_phi[jets_.nref] = -std::numeric_limits<double>::max();
+        jets_.refdyn_deltaR[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.refdyn_kt[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.refdyn_z[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.ref_intjet_multi[jets_.nref] = std::numeric_limits<int>::min();
+        jets_.ref_girth[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.ref_girth_new[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.ref_thrust[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.ref_LHA[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.ref_pTD[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.ref_PLJPkT.push_back({});
+        jets_.ref_PLJPdR.push_back({});
+        jets_.ref_PLJPeta.push_back({});
+        jets_.ref_PLJPphi.push_back({});
+        jets_.refpt[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.refeta[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.refphi[jets_.nref] = - std::numeric_limits<double>::max();
+        jets_.PLJP_TtoRmatch_dR.push_back({});
+        jets_.PLJP_TtoRmatch_idx.push_back({});
+        jets_.PLJP_RtoTmatch_dR.push_back({});
+        jets_.PLJP_RtoTmatch_idx.push_back({});
+        jets_.refdyn_isClosestToReco[jets_.nref] = false;
+        jets_.jtdyn_isClosestToTruth[jets_.nref] = false;
+        jets_.jtdyn_refdyn_dR[jets_.nref] = std::numeric_limits<float>::max();
+      }
+      else{
+        if(jet.genParton()){
         const reco::GenParticle & parton = *jet.genParton();
         jets_.refparton_pt[jets_.nref] = parton.pt();
         jets_.refparton_flavor[jets_.nref] = parton.pdgId();
@@ -485,9 +493,10 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       jets_.refeta[jets_.nref] = genjet->eta();
       jets_.refphi[jets_.nref] = genjet->phi();
             //cout<<"jet daughters gen"<<genjet->numberOfDaughters()<<endl;
-      if(dopthatcut) if(pthat<0.35*genjet->pt()) continue;
-
-      IterativeDeclusteringGen(groom_type, groom_combine, *genjet, sub1Gen, sub2Gen);
+      IterativeDeclusteringGen(groom_type, groom_combine, *genjet);
+      // for(size_t e{0}; e < jets_.jtJetConstituent.size(); e++){
+      //   std::cout << "emission pt " << jets_.jtJetConstituent.at(e).perp() << std::endl;
+      // }
       if(doHardestSplitMatching_){
         TruthRecoRecoTruthMatching();
         // if(!(jets_.jtdyn_isClosestToTruth[jets_.nref] && jets_.refdyn_isClosestToReco[jets_.nref])){
@@ -500,32 +509,56 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
         //   }
         // }
         // std::cout << "Constituent vector lengths " << jets_.jtJetConstituent.size() << " " << jets_.refJetConstituent.size() << std::endl;
+         // std::cout << "Constituent vector lengths after clear " << jets_.jtJetConstituent.size() << " " << jets_.refJetConstituent.size() << std::endl;
+      }
+      if(doFullPLJPmatching_){
+        std::vector<float> TtoR_dist = {};
+        std::vector<float> RtoT_dist = {};
+        std::vector<Int_t> TtoR_idx = {};
+        std::vector<Int_t> RtoT_idx = {};
+        // std::cout << "Before matching constituents " << jets_.jtJetConstituent.size() << std::endl;
+        matchPLJP(TtoR_dist, TtoR_idx, jets_.refJetConstituent, jets_.jtJetConstituent);
+        matchPLJP(RtoT_dist, RtoT_idx, jets_.jtJetConstituent, jets_.refJetConstituent);
+        // std::cout << RtoT_dist.size() << " and " << RtoT_idx.size() << " to pushback for PLJP dist and indices" << std::endl;
+        jets_.PLJP_TtoRmatch_dR.push_back(TtoR_dist);
+        jets_.PLJP_TtoRmatch_idx.push_back(TtoR_idx);
+        jets_.PLJP_RtoTmatch_dR.push_back(RtoT_dist);
+        jets_.PLJP_RtoTmatch_idx.push_back(RtoT_idx);
+      }
+
+      if(doFullPLJPmatching_ or doHardestSplitMatching_){
         jets_.jtJetConstituent = {};
         jets_.refJetConstituent = {};
-         // std::cout << "Constituent vector lengths after clear " << jets_.jtJetConstituent.size() << " " << jets_.refJetConstituent.size() << std::endl;
-        
       }
-      if(doSubjetPurity){
-        jets_.refsub11[jets_.nref] = sqrt(pow((sub1Gen->rap()-sub1Hyb->rap()),2)+pow((sub1Gen->phi()-sub1Hyb->phi()),2));
-        jets_.refsub12[jets_.nref] = sqrt(pow((sub1Gen->rap()-sub2Hyb->rap()),2)+pow((sub1Gen->phi()-sub2Hyb->phi()),2));
-        jets_.refsub21[jets_.nref] = sqrt(pow((sub2Gen->rap()-sub1Hyb->rap()),2)+pow((sub2Gen->phi()-sub1Hyb->phi()),2));
-        jets_.refsub22[jets_.nref] = sqrt(pow((sub2Gen->rap()-sub2Hyb->rap()),2)+pow((sub2Gen->phi()-sub2Hyb->phi()),2));
+
+      
+      // for(size_t h{0}; h < jets_.jt_PLJPkT[jets_.nref].size(); ++h){
+        // std::cout << "checking vector again " << jets_.jt_PLJPkT[jets_.nref].at(h) << std::endl;
+      // }
       }
+      
+      
     }
-
-    delete sub1Gen;
-    delete sub2Gen;
-    delete sub1Hyb;
-    delete sub2Hyb;       
-
+    // if(jets_.PLJP_RtoTmatch_dR[jets_.nref].size() != jets_.PLJP_RtoTmatch_idx[jets_.nref].size() or jets_.jt_PLJPkT[jets_.nref].size() != jets_.PLJP_RtoTmatch_idx[jets_.nref].size() ){
+    //     std::cout << "Reco vectors don't match!" << std::endl;
+    //     std::cout << jets_.PLJP_RtoTmatch_dR[jets_.nref].size() << jets_.PLJP_RtoTmatch_idx[jets_.nref].size() << jets_.jt_PLJPkT[jets_.nref].size() << jets_.jt_PLJPdR[jets_.nref].size() << std::endl;
+    //     std::cout << "reco jet pt=" << jets_.jtpt[jets_.nref] << std::endl;
+    //     std::cout << "truth jet pt=" << jets_.refpt[jets_.nref] << std::endl; 
+    //   }    
     jets_.nref++;
-  } 
-  // jets_.triggerJetInAcceptance = trigger_jet_in_acceptance;
+  }
+  // std::cout << "For above event, have jets:" << std::endl;
+  // for(int i{0}; i < jets_.nref; ++i){
+  //   std::cout << "reco jet pt=" << jets_.jtpt[i] << " eta=" << jets_.jteta[i] << std::endl;
+  //   std::cout << "truth jet pt=" << jets_.refpt[i] << " eta=" << jets_.refeta[i] << std::endl; 
+  // }
+  // std::cout << " end of the jet loop, new event!" << std::endl;
+  // std::cout << jets_.PLJP_TtoRmatch_dR.size() << " matching vectors in this event with jets " << jets_.nref << std::endl;
   t->Fill();
   memset(&jets_,0,sizeof jets_);
 }
 
-void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet, fastjet::PseudoJet *sub1, fastjet::PseudoJet *sub2)
+void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double groom_combine, const reco::Jet& jet)
 {
   // std::cout << "new jet" << std::endl;
   Double_t map_Corrected_jtpt = jets_.rawpt[jets_.nref];
@@ -557,6 +590,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
   std::vector<float> jet_PLJPdR = {};
   std::vector<float> jet_PLJPeta = {};
   std::vector<float> jet_PLJPphi = {};
+  // std::cout << " take jet pt=" << jet.pt() << " and the PLJP kt vector is n=" << jet_PLJPkT.size() << std::endl;
   Int_t nsplit = 0;
   double dyn_kt = std::numeric_limits<double>::min();
   Int_t dyn_split = 0;
@@ -645,7 +679,6 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     }
     //the change in the peripheral neutrals must compensate for the difference coming from core
     float peripheralNeutralChange = assymDelta_jetpt - assymDelta_corePtChange; 
-    double jetEnergyDifferenceOutsideCore = 0;
     double JetNeutralEnergyFraction = JetNeutralEnergy/jets_.jtrawE[jets_.nref];
     // std::cout << jet.pt() << " jet pT " << jet.eta() << " jet eta " << jets_.jtrawE[jets_.nref] << " raw jet E" << std::endl;
     // std::cout << " ratio " << JetNeutralEnergyFraction << std::endl;
@@ -678,7 +711,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
           //treat all neutrals equally in order to compensate for jet asymmetry (no matter if in core or not)
           if(doCompensatoryNeuPFScaling_){
             double map_value = ReadJetAsymmMap((**it).eta(), (**it).phi(), *Asymm_map_);
-            double particle_dp = map_value*(**it).pt();
+            // double particle_dp = map_value*(**it).pt();
             // std::cout << "Fraction of excess momentum " << assymDelta_jetpt << " going into particle " << particle_dp/assymSum_allNeuChange << std::endl;
             // std::cout << "Total sum in changed neutrals: " << assymSum_allNeuChange << std::endl;
             map_value = map_value*assymDelta_jetpt/assymSum_allNeuChange;
@@ -734,7 +767,6 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
         double closest_to_particle = 0.087;
         fastjet::PseudoJet temp_part;
         temp_part.reset((**it).px(), (**it).py(), (**it).pz(), (**it).energy());
-        Bool_t acceptorCharge = false;
         // int acceptorPos = 0;
         Int_t  count_it2 = 0;
         Int_t selectedAcceptor = 0;
@@ -830,7 +862,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     //   std::cout << particles.at(p).perp() << " ";
     // }
     // std::cout << std::endl;
-    Int_t itp_idx = 0;
+    // Int_t itp_idx = 0;
     // std::cout << jets_.eN[jets_.nref] + jets_.photonN[jets_.nref] + jets_.muN[jets_.nref] + jets_.chargedN[jets_.nref] + jets_.neutralN[jets_.nref] << " constituents recorded out of " << particles.size() << std::endl;
     // std::cout << (jets_.eg_HFSum[jets_.nref] + jets_.h_HFSum[jets_.nref] + jets_.eSum[jets_.nref] + jets_.muSum[jets_.nref] + jets_.photonSum[jets_.nref] + jets_.chargedSum[jets_.nref] + jets_.neutralSum[jets_.nref])/jets_.jtrawE[jets_.nref] << " fractional energy" << std::endl;
     // std::cout << "something else above? jet eta " << jets_.jteta[jets_.nref] << std::endl;
@@ -916,8 +948,12 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     while(jj.has_parents(j1,j2)){
       if(j1.perp() < j2.perp()) std::swap(j1,j2);
       double delta_R = j1.delta_R(j2);
-      if(doHardestSplitMatching_ && isMC_) jets_.jtJetConstituent.push_back(j2);
       double k_t = j2.perp()*delta_R;
+      if((doHardestSplitMatching_ && isMC_) or (doFullPLJPmatching_ && isMC_)){
+        jets_.jtJetConstituent.push_back(j2);
+        // std::cout << j2.perp() << " emission saved" << std::endl;
+      }
+      
       z = j2.perp()/(j1.perp()+j2.perp());
       // double dyn = z*(1-z)*j2.perp()*pow(delta_R/rParam,mydynktcut);
       // double dyn = 1./output_jets[0].perp()*z*(1-z)*jj.perp()*pow(delta_R/rParam,mydynktcut);
@@ -956,7 +992,12 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     jets_.jt_thrust[jets_.nref] = jet_thrust;
     jets_.jt_LHA[jets_.nref] = jet_LHA;
     jets_.jt_pTD[jets_.nref] = jet_pTD;
+    // if(jets_.jt_PLJPkT.size() != 0 ) std::cout << "Before pushing, check last entry size " << jets_.jt_PLJPkT.back().size() << std::endl;
+    // std::cout << "Size of PLJP kT " << jets_.jt_PLJPkT.size() << " and jet number " << jets_.nref << std::endl;
     jets_.jt_PLJPkT.push_back(jet_PLJPkT);
+    for(size_t g{0}; g < jet_PLJPkT.size(); g++){
+      // std::cout << jet_PLJPkT.at(g) << " into the kt vector" << std::endl;
+    }
     jets_.jt_PLJPdR.push_back(jet_PLJPdR);
     jets_.jt_PLJPeta.push_back(jet_PLJPeta);
     jets_.jt_PLJPphi.push_back(jet_PLJPphi);
@@ -970,7 +1011,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
   }
 }
 
-void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet,fastjet::PseudoJet *sub1,fastjet::PseudoJet *sub2)
+void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double groom_combine, const reco::GenJet& jet)
 {
   Int_t intjet_multi = 0;
   float jet_girth = 0;
@@ -1067,7 +1108,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double 
     while(jj.has_parents(j1,j2)){
       if(j1.perp() < j2.perp()) std::swap(j1,j2);
       double delta_R = j1.delta_R(j2);
-      if(doHardestSplitMatching_ && isMC_) jets_.refJetConstituent.push_back(j2);
+      if((doHardestSplitMatching_ && isMC_) or (doFullPLJPmatching_ && isMC_)) jets_.refJetConstituent.push_back(j2);
       double k_t = j2.perp()*delta_R;
       z = j2.perp()/(j1.perp()+j2.perp());
       if(doPrimaryLJPTruth_){
@@ -1235,7 +1276,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double 
 
 // }
 
-//maybe there is a more elegant way than the one below for matching...
+// maybe there is a more elegant way than the one below for matching...
 void HiInclusiveJetAnalyzer::RecoTruthSplitMatching(std::vector<fastjet::PseudoJet> &constituents_level1, fastjet::PseudoJet &hardest_level2, bool *bool_array, int *hardest_level1_split){
     //for now only include geometric matching, maybe consider pt/z, Lund plane location, etc...
   float min_dR = std::numeric_limits<float>::max();
@@ -1256,6 +1297,50 @@ void HiInclusiveJetAnalyzer::RecoTruthSplitMatching(std::vector<fastjet::PseudoJ
     // std::cout << "Sorry, closest pair is " << min_dR << " away with index " << static_cast<int>(closest_level1) << " as opposed to " << hardest_level1_split[jets_.nref] << std::endl;
     bool_array[jets_.nref] = false;
   }
+}
+
+void HiInclusiveJetAnalyzer::TruthRecoRecoTruthMatching(){
+  // std::cout << jets_.jtdyn_split[jets_.nref] << " " << jets_.refdyn_split[jets_.nref] << " numbers of highest splits" << std::endl;
+  if( jets_.jtdyn_split[jets_.nref] == std::numeric_limits<int>::min() || jets_.refdyn_split[jets_.nref] == std::numeric_limits<int>::min() || jets_.jtJetConstituent.size() == 0 || jets_.refJetConstituent.size() == 0 ){
+    jets_.refdyn_isClosestToReco[jets_.nref] = false;
+    jets_.jtdyn_isClosestToTruth[jets_.nref] = false;
+    jets_.jtdyn_refdyn_dR[jets_.nref] = std::numeric_limits<float>::max();
+    return;
+  }
+  //mind how the split number is defined in the reclustering
+  fastjet::PseudoJet hardest_R_split = jets_.jtJetConstituent.at(jets_.jtdyn_split[jets_.nref]);
+  fastjet::PseudoJet hardest_T_split = jets_.refJetConstituent.at(jets_.refdyn_split[jets_.nref]);
+  // std::cout << hardest_R_split.eta() << " " << hardest_R_split.phi() << " hardest reco  splitting in matching" << std::endl;
+  // std::cout << hardest_T_split.eta() << " " << hardest_T_split.phi() << " hardest truth splitting in matching" << std::endl;
+  // std::cout << "Angle between hardest splits is dR = " << hardest_R_split.delta_R(hardest_T_split) << std::endl;
+  jets_.jtdyn_refdyn_dR[jets_.nref] = hardest_R_split.delta_R(hardest_T_split);
+  // std::cout << "truth loop" << std::endl;
+  RecoTruthSplitMatching(jets_.refJetConstituent, hardest_R_split, jets_.refdyn_isClosestToReco, jets_.refdyn_split);
+  // std::cout << "reco loop" << std::endl;
+  RecoTruthSplitMatching(jets_.jtJetConstituent,  hardest_T_split, jets_.jtdyn_isClosestToTruth, jets_.jtdyn_split);
+}
+
+
+// save maps of nearest neighbours
+// consider jet to be fully matched only if we have the same number of emissions at reco and truth, and if each emission is
+void HiInclusiveJetAnalyzer::matchPLJP(std::vector<float> &match_dR, std::vector<Int_t> &match_idx, std::vector<fastjet::PseudoJet> &level1, std::vector<fastjet::PseudoJet> &level2){
+  // std::cout << " How many emissions within matching " << (Int_t)level1.size() << std::endl;
+  for( Int_t i{0}; i < (Int_t)level1.size(); ++i ){
+    Double_t min_distance = std::numeric_limits<double>::max();
+    Int_t paired_em = -5;
+    // std::cout << "For emission number: " << i << std::endl;
+    for( Int_t j{0}; j < (Int_t)level2.size(); ++j ){
+      Double_t dist = level1.at(i).delta_R(level2.at(j));
+      // std::cout << " distance to j: " << dist << std::endl;
+      if( dist < min_distance ){
+        min_distance = dist;
+        paired_em = j;
+      }
+    }
+  match_idx.push_back(paired_em);
+  match_dR.push_back(min_distance);
+  }
+  // std::cout << match_idx.size() << " " << match_dR.size() << " sizes of saved vectors" << std::endl;
 }
 
 float HiInclusiveJetAnalyzer::ReadJetAsymmMap(float eta, float phi, TH2F Asymm_map){
@@ -1279,27 +1364,6 @@ std::vector<float> HiInclusiveJetAnalyzer::BinBoundsAsymmMap(float eta, float ph
   float phi_low = Asymm_map.GetYaxis()->GetBinLowEdge(Asymm_map.GetYaxis()->FindBin(phi));
   float phi_high = Asymm_map.GetYaxis()->GetBinLowEdge(Asymm_map.GetYaxis()->FindBin(phi)+1);
   return result = {eta_low, eta_high, phi_low, phi_high};
-}
-
-void HiInclusiveJetAnalyzer::TruthRecoRecoTruthMatching(){
-  // std::cout << jets_.jtdyn_split[jets_.nref] << " " << jets_.refdyn_split[jets_.nref] << " numbers of highest splits" << std::endl;
-  if( jets_.jtdyn_split[jets_.nref] == std::numeric_limits<int>::min() || jets_.refdyn_split[jets_.nref] == std::numeric_limits<int>::min() || jets_.jtJetConstituent.size() == 0 || jets_.refJetConstituent.size() == 0 ){
-    jets_.refdyn_isClosestToReco[jets_.nref] = false;
-    jets_.jtdyn_isClosestToTruth[jets_.nref] = false;
-    jets_.jtdyn_refdyn_dR[jets_.nref] = std::numeric_limits<float>::max();
-    return;
-  }
-  //mind how the split number is defined in the reclustering
-  fastjet::PseudoJet hardest_R_split = jets_.jtJetConstituent.at(jets_.jtdyn_split[jets_.nref]);
-  fastjet::PseudoJet hardest_T_split = jets_.refJetConstituent.at(jets_.refdyn_split[jets_.nref]);
-  // std::cout << hardest_R_split.eta() << " " << hardest_R_split.phi() << " hardest reco  splitting in matching" << std::endl;
-  // std::cout << hardest_T_split.eta() << " " << hardest_T_split.phi() << " hardest truth splitting in matching" << std::endl;
-  // std::cout << "Angle between hardest splits is dR = " << hardest_R_split.delta_R(hardest_T_split) << std::endl;
-  jets_.jtdyn_refdyn_dR[jets_.nref] = hardest_R_split.delta_R(hardest_T_split);
-  // std::cout << "truth loop" << std::endl;
-  RecoTruthSplitMatching(jets_.refJetConstituent, hardest_R_split, jets_.refdyn_isClosestToReco, jets_.refdyn_split);
-  // std::cout << "reco loop" << std::endl;
-  RecoTruthSplitMatching(jets_.jtJetConstituent,  hardest_T_split, jets_.jtdyn_isClosestToTruth, jets_.jtdyn_split);
 }
 
 int HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandidateCollection *pfCandidateColl)
@@ -1364,108 +1428,6 @@ double HiInclusiveJetAnalyzer::getPtRel(const reco::PFCandidate& lep, const pat:
   return (pTrel2 > 0) ? std::sqrt(pTrel2) : 0.0;
 }
 
-// Recursive function, but this version gets called only the first time
-
-void HiInclusiveJetAnalyzer::saveDaughters(const reco::GenParticle &gen){
-
-  for(unsigned i = 0; i<gen.numberOfDaughters(); i++){
-    const reco::Candidate & daughter = *gen.daughter(i);
-    double daughterPt = daughter.pt();
-    if(daughterPt<1.) continue;
-    double daughterEta = daughter.eta();
-    if(fabs(daughterEta)>3.) continue;
-    int daughterPdgId = daughter.pdgId();
-    int daughterStatus = daughter.status();
-        // Special case when b->b+string, both b and string contain all daughters, so only take the string
-    if(gen.pdgId()==daughterPdgId && gen.status()==3 && daughterStatus==2) continue;
-
-        // cheesy way of finding strings which were already used
-    if(daughter.pdgId()==92){
-      for(unsigned ist = 0;ist<usedStringPts.size();ist++){
-       if(fabs(daughter.pt() - usedStringPts[ist]) < 0.0001) return;
-     }
-     usedStringPts.push_back(daughter.pt());
-   }
-   jets_.bJetIndex[jets_.bMult] = jets_.nref;
-   jets_.bStatus[jets_.bMult] = daughterStatus;
-   jets_.bVx[jets_.bMult] = daughter.vx();
-   jets_.bVy[jets_.bMult] = daughter.vy();
-   jets_.bVz[jets_.bMult] = daughter.vz();
-   jets_.bPt[jets_.bMult] = daughterPt;
-   jets_.bEta[jets_.bMult] = daughterEta;
-   jets_.bPhi[jets_.bMult] = daughter.phi();
-   jets_.bPdg[jets_.bMult] = daughterPdgId;
-   jets_.bChg[jets_.bMult] = daughter.charge();
-   jets_.bMult++;
-   saveDaughters(daughter);
- }
-}
-
-// This version called for all subsequent calls
-void HiInclusiveJetAnalyzer::saveDaughters(const reco::Candidate &gen){
-
-  for(unsigned i = 0; i<gen.numberOfDaughters(); i++){
-    const reco::Candidate & daughter = *gen.daughter(i);
-    double daughterPt = daughter.pt();
-    if(daughterPt<1.) continue;
-    double daughterEta = daughter.eta();
-    if(fabs(daughterEta)>3.) continue;
-    int daughterPdgId = daughter.pdgId();
-    int daughterStatus = daughter.status();
-        // Special case when b->b+string, both b and string contain all daughters, so only take the string
-    if(gen.pdgId()==daughterPdgId && gen.status()==3 && daughterStatus==2) continue;
-
-        // cheesy way of finding strings which were already used
-    if(daughter.pdgId()==92){
-      for(unsigned ist=0;ist<usedStringPts.size();ist++){
-        if(fabs(daughter.pt() - usedStringPts[ist]) < 0.0001) return;
-      }
-      usedStringPts.push_back(daughter.pt());
-    }
-
-    jets_.bJetIndex[jets_.bMult] = jets_.nref;
-    jets_.bStatus[jets_.bMult] = daughterStatus;
-    jets_.bVx[jets_.bMult] = daughter.vx();
-    jets_.bVy[jets_.bMult] = daughter.vy();
-    jets_.bVz[jets_.bMult] = daughter.vz();
-    jets_.bPt[jets_.bMult] = daughterPt;
-    jets_.bEta[jets_.bMult] = daughterEta;
-    jets_.bPhi[jets_.bMult] = daughter.phi();
-    jets_.bPdg[jets_.bMult] = daughterPdgId;
-    jets_.bChg[jets_.bMult] = daughter.charge();
-    jets_.bMult++;
-    saveDaughters(daughter);
-  }
-}
-
-//--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet& jet) {
-
-  std::vector<float> sjpt;
-  std::vector<float> sjeta;
-  std::vector<float> sjphi;
-  std::vector<float> sjm;
-  if(jet.numberOfDaughters()>0) {
-    for (unsigned k = 0; k < jet.numberOfDaughters(); ++k) {
-      const reco::Candidate & dp = *jet.daughter(k);
-      sjpt.push_back(dp.pt());
-      sjeta.push_back(dp.eta());
-      sjphi.push_back(dp.phi());
-      sjm.push_back(dp.mass());
-    }
-  } 
-  else {
-    sjpt.push_back(-999.);
-    sjeta.push_back(-999.);
-    sjphi.push_back(-999.);
-    sjm.push_back(-999.);
-  }
-  jets_.jtSubJetPt.push_back(sjpt);
-  jets_.jtSubJetEta.push_back(sjeta);
-  jets_.jtSubJetPhi.push_back(sjphi);
-  jets_.jtSubJetM.push_back(sjm);  
-}
-
 //--------------------------------------------------------------------------------------------------
 int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet& jet) const {
 
@@ -1484,7 +1446,7 @@ int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet& jet) const
 }
 
 //--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet& jet) {
+void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet& jet){
 
     //Find closest soft-dropped gen jet
   int imatch = getGroomedGenJetIndex(jet);
@@ -1492,7 +1454,7 @@ void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet& jet) {
 }
 
 //--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeGenSubjets(const reco::GenJet& jet) {
+void HiInclusiveJetAnalyzer::analyzeGenSubjets(const reco::GenJet& jet){
   //Find closest soft-dropped gen jet
   int imatch = getGroomedGenJetIndex(jet);
   double dr = 999.;

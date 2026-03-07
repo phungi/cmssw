@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from CRABClient.UserUtilities import config
 
-jobTag = "2024_PbPb_MB0_forRho"
+jobTag = "OO_data_filtered"
 config = config()
 config.section_('General')
 config.General.transferOutputs = True
@@ -18,8 +18,8 @@ config.JobType.pluginName = 'Analysis'
 config.JobType.maxMemoryMB = 5000
 
 config.section_('Data')
-# config.Data.inputDataset = '/IonPhysics0/OORun2025-PromptReco-v1/MINIAOD'
-config.Data.inputDataset = '/HIMinimumBias0/HIRun2024A-PromptReco-v1/MINIAOD'
+config.Data.inputDataset = '/IonPhysics0/OORun2025-PromptReco-v1/MINIAOD'
+# config.Data.inputDataset = '/HIMinimumBias0/HIRun2024A-PromptReco-v1/MINIAOD'
 config.Data.publication = False
 # config.Data.runRange = '306773-306793'
 # config.Data.totalUnits = -1
