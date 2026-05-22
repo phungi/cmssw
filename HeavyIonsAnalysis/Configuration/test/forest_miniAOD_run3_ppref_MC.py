@@ -22,13 +22,14 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/mc/RunIIIpp5p36Winter24MiniAOD/QCD_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/141X_mcRun3_2024_realistic_ppRef5TeV_v7-v2/140000/01bdbafd-e89b-49bd-ae1e-24b53f8d79a4.root'
+        '/store/mc/RunIIIpp5p36Winter24MiniAOD/QCD_Pt-15to1200_TuneCH3_Flat_5p36TeV_herwig7/MINIAODSIM/141X_mcRun3_2024_realistic_ppRef5TeV_v7-v2/100000/0121c4bf-bf97-4dec-9d9c-5bc0f629042c.root'
+        # '/store/mc/RunIIIpp5p36Winter24MiniAOD/QCD_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/141X_mcRun3_2024_realistic_ppRef5TeV_v7-v2/140000/01bdbafd-e89b-49bd-ae1e-24b53f8d79a4.root'
     )
 )
 
 # Number of events we want to process, -1 = all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(100)
+    input = cms.untracked.int32(500)
 )
 
 #####################################################################################
@@ -88,6 +89,7 @@ process.hiEvtAnalyzer.doHFfilters = cms.bool(False) # Disable HF filters for ppR
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 
 # TODO: Many of these triggers are not available in the test file
 from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
@@ -127,9 +129,9 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis *
-    process.hiEvtAnalyzer *
+    process.hiEvtAnalyzer
     # process.hltobject +
-    process.l1object
+    # process.l1object
     # process.HiGenParticleAna +
     # process.ggHiNtuplizer +
     # process.trackSequencePP +
@@ -178,3 +180,30 @@ for jetLabel in jetLabels:
         getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsAK"+jetLabel+"PFCHSBtag")
         getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFCHSBtag")
     process.forest += getattr(process,"ak"+jetLabel+"PFJetAnalyzer")
+
+# Schedule definition
+process.pAna = cms.EndPath(process.skimanalysis)
+
+process.primaryVertexFilter = cms.EDFilter("VertexSelector",
+    src = cms.InputTag("offlineSlimmedPrimaryVertices"),
+    cut = cms.string("!isFake && abs(z) <= 25 && position.Rho <= 2"), #in miniADO trackSize()==0, however there is no influence.
+    filter = cms.bool(True), # otherwise it won't filter the event
+)
+
+from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import *
+process.unpackedTracksAndVertices = unpackedTracksAndVertices
+process.noscraping = cms.EDFilter("FilterOutScraping",
+    applyfilter = cms.untracked.bool(True),
+    debugOn = cms.untracked.bool(False),
+    numtrack = cms.untracked.uint32(10),
+    thresh = cms.untracked.double(0.25),
+    src = cms.untracked.InputTag("unpackedTracksAndVertices") # generalTracks collection not found
+)
+
+process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
+process.ppNoScrapingSequence = cms.Sequence(
+    process.unpackedTracksAndVertices +
+    process.noscraping)
+process.ppNoScrapingFilter = cms.Path(process.ppNoScrapingSequence)
+
+process.MessageLogger.cerr.FwkReport.reportEvery = 300

@@ -129,6 +129,7 @@ private:
   bool doPrimaryLJPReco_;
   bool doPrimaryLJPTruth_;
 
+  double minConstituentPt_;
   bool doChargedConstOnly_;
   bool doHardestSplitMatching_;
   bool dopthatcut;

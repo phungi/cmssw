@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from CRABClient.UserUtilities import config
 
-jobTag = "OO_pythia_30k_ChargedDown"
+jobTag = "OO_pythia_embedded_2GeV_constit_cut"
 config = config()
 config.section_('General')
 config.General.transferOutputs = True

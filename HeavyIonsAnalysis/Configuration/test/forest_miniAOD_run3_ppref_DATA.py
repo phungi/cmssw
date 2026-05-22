@@ -24,12 +24,15 @@ process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
         '/store/data/Run2024J/PPRefHardProbes3/MINIAOD/PromptReco-v1/000/387/409/00000/dae85526-3df2-42ee-809c-0d6d17d09e6b.root'
+        # '/store/data/Run2024J/PPRefZeroBiasPlusForward0/MINIAOD/PromptReco-v1/000/387/319/00000/10e5ee9f-e6ec-4c38-ab9a-971b0407ef9c.root',
+        # '/store/data/Run2024J/PPRefZeroBiasPlusForward0/MINIAOD/PromptReco-v1/000/387/322/00000/936c40b6-61bf-491e-b050-bf06db4e6141.root',
+        # '/store/data/Run2024J/PPRefZeroBiasPlusForward0/MINIAOD/PromptReco-v1/000/387/396/00000/159e5131-22f0-4dcb-b3bb-ad2303f0b0dd.root'
     )
 )
 
 # Number of events we want to process, -1 = all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(200)
+    input = cms.untracked.int32(4000)
 )
 
 #####################################################################################
@@ -145,31 +148,20 @@ process.forest = cms.Path(
     process.hltanalysis *
     process.hiEvtAnalyzer
 #    process.hltobject +
-    # process.l1object +
+    # process.l1object 
     # process.ggHiNtuplizer +
     # process.zdcSequencePP +
-    # process.trackSequencePP +
+    # process.trackSequencePP
     # process.particleFlowAnalyser +
     # process.unpackedMuons +
     # process.muonAnalyzer
 )
 
-
-# Schedule definition
-process.pAna = cms.EndPath(process.skimanalysis)
-
-process.primaryVertexFilter = cms.EDFilter("VertexSelector",
-    src = cms.InputTag("offlineSlimmedPrimaryVertices"),
-    cut = cms.string("!isFake && abs(z) <= 25 && position.Rho <= 2"), #in miniADO trackSize()==0, however there is no influence.
-    filter = cms.bool(True), # otherwise it won't filter the event
-)
-process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
-
 #####################################################################################
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC 
 jetPtMin = 20
-jetAbsEtaMax = 2.
+jetAbsEtaMax = 2.5
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -202,3 +194,36 @@ for jetLabel in jetLabels:
         getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsAK"+jetLabel+"PFCHSBtag")
         getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFCHSBtag")
     process.forest += getattr(process,"ak"+jetLabel+"PFJetAnalyzer")
+
+
+# Schedule definition
+process.pAna = cms.EndPath(process.skimanalysis)
+
+# process.primaryVertexFilter = cms.EDFilter("VertexSelector",
+#     src = cms.InputTag("offlineSlimmedPrimaryVertices"),
+#     cut = cms.string("!isFake && abs(z) <= 25 && position.Rho <= 2"), #in miniADO trackSize()==0, however there is no influence.
+#     filter = cms.bool(True), # otherwise it won't filter the event
+# )
+
+from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import *
+process.unpackedTracksAndVertices = unpackedTracksAndVertices
+process.noscraping = cms.EDFilter("FilterOutScraping",
+    applyfilter = cms.untracked.bool(True),
+    debugOn = cms.untracked.bool(False),
+    numtrack = cms.untracked.uint32(10),
+    thresh = cms.untracked.double(0.25),
+    src = cms.untracked.InputTag("unpackedTracksAndVertices") # generalTracks collection not found
+)
+
+
+process.ppNoScrapingSequence = cms.Sequence(
+    process.unpackedTracksAndVertices +
+    process.noscraping)
+process.ppNoScrapingFilter = cms.Path(process.ppNoScrapingSequence)
+
+process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
+# process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
+process.OOphfCoincFilterPF2Th4 = cms.Path(process.phfCoincFilterPF2Th4)
+process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
+process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
+process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)

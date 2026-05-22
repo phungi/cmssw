@@ -20,7 +20,9 @@ process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
         # 'root://eoscms.cern.ch//store/group/phys_heavyions/jviinika/PythiaHydjetRun3_5p36TeV_dijet_ptHat15_100kEvents_miniAOD_2023_08_30/PythiaHydjetDijetRun3/PythiaHydjetRun3_dijet_ptHat15_5p36TeV_miniAOD/230830_165931/0000/pythiaHydjet_miniAOD_11.root'
         # '/store/mc/HINOOSpring25MiniAOD/QCD-dijet_Pthat-15_TuneCP5_OO_5p36TeV_pythia8/MINIAODSIM/150X_mcRun3_2025_forOO_realistic_v7-v2/2520000/d1f329d4-2107-47e4-a6ee-c7e5fd7e8c9c.root',
-        '/store/mc/HINOOSpring25MiniAOD/Dijet_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/NoPU_150X_mcRun3_2025_forOO_realistic_v9-v1/2520000/00d79cc8-0102-4a3e-8693-11fd2eabc383.root'
+        # '/store/mc/HINOOSpring25MiniAOD/Dijet_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/NoPU_150X_mcRun3_2025_forOO_realistic_v9-v1/2520000/00d79cc8-0102-4a3e-8693-11fd2eabc383.root'
+        # '/store/mc/HINOOSpring25MiniAOD/QCD-dijet_pThat15-event-weighted_TuneCP5_5p36TeV_pythia8/MINIAODSIM/CustomTrack_150X_mcRun3_2025_forOO_realistic_v9-v2/120000/021d35a4-19c3-433d-b276-d69f30aef036.root'
+        '/store/mc/HINOOSpring25MiniAOD/Dijet_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/NoPU_150X_mcRun3_2025_forOO_realistic_v9-v1/2520000/01c9cd33-f34f-46d4-b621-22bebb3daeb5.root'
     ),
     # skipEvents = cms.untracked.uint32(454),
     # firstRun = cms.untracked.uint32(1),
@@ -29,7 +31,7 @@ process.source = cms.Source("PoolSource",
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(600)
+    input = cms.untracked.int32(2000)
     )
 
 ###############################################################################
@@ -43,7 +45,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '141X_mcRun3_2024_realistic_HI_v11', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '150X_mcRun3_2025_forOO_realistic_v9', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
@@ -62,7 +64,7 @@ process.centralityBin.centralityVariable = cms.string("HFtowers")
 
 # root output
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("HiForestMiniAOD.root"))
+    fileName = cms.string("unembedded_L1HLT_objects_MC.root"))
 
 # # edm output for debugging purposes
 # process.output = cms.OutputModule(
@@ -90,8 +92,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
-#process.hltobject.triggerNames = trigger_list_mc
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc_OO
+process.hltobject.triggerNames = trigger_list_mc_OO
 
 ################################
 # electrons, photons, muons
@@ -134,9 +136,9 @@ process.forest = cms.Path(
     process.HiForestInfo +
     process.centralityBin +
     process.hiEvtAnalyzer +
-    process.hltanalysis
-#   process.hltobject +
-#   process.l1object +
+    process.hltanalysis +
+    process.hltobject +
+    process.l1object
 #   process.trackSequencePbPb +
 #   process.particleFlowAnalyser +
 #   process.HiGenParticleAna +

@@ -465,3 +465,11 @@ trigger_list_mc = trigger_list_data.__add__([
    'HLT_HIFullTracks2018_HighPt56_NoIter10_v',
    'HLT_HIFullTracks2018_HighPt60_NoIter10_v',
    ])
+
+trigger_list_mc_OO = trigger_list_mc.__add__([
+   'HLT_MinimumBiasHF_OR_BptxAND_v',
+   'HLT_OxyL1SingleJet28_v',
+   'HLT_OxyL1SingleJet35_v',
+   'HLT_OxyL1SingleJet44_v',
+   'HLT_OxyL1SingleJet60_v',
+   ])

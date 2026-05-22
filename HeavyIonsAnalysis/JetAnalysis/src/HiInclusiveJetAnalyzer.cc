@@ -66,6 +66,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
 
   rParam = iConfig.getParameter<double>("rParam");
   hardPtMin_ = iConfig.getUntrackedParameter<double>("hardPtMin",4);
+  minConstituentPt_ = iConfig.getUntrackedParameter<double>("minConstituentPt", 0.);
   jetPtMin_ = iConfig.getParameter<double>("jetPtMin");
   mysdcut1 = iConfig.getParameter<double>("mysdcut1");
   mysdcut2 = iConfig.getParameter<double>("mysdcut2");
@@ -142,6 +143,7 @@ void HiInclusiveJetAnalyzer::endRun(const edm::Run& run, const edm::EventSetup& 
 
 void HiInclusiveJetAnalyzer::beginJob() {
   std::cout << "Running job with systematics" << std::endl;
+  std::cout << "Reco cut on jet constituents for reclustering: " << minConstituentPt_ << std::endl;
   std::cout << "Doing Charged only: " << doChargedConstOnly_ << std::endl;
   std::cout << "Track efficiency var: " << TrackVariation_ << std::endl;
   std::cout << "Charged pfCand 4-mom var: " << pfChargedCandidateEnergyScale_ << std::endl;
@@ -450,7 +452,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     if(isMC_){
       const reco::GenJet * genjet = jet.genJet();
       if(!genjet or (genjet and dopthatcut and pthat<0.35*genjet->pt())){
-        // std::cout << jet.pt() << " does not have a truth partner!" << std::endl;
+        // if( jet.pt() > 200 ) std::cout << jet.pt() << " does not have a truth partner!" << std::endl;
         jets_.refdyn_split[jets_.nref] = std::numeric_limits<int>::min();
         jets_.refdyn_eta[jets_.nref] = -std::numeric_limits<double>::max();
         jets_.refdyn_phi[jets_.nref] = -std::numeric_limits<double>::max();
@@ -483,12 +485,12 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
         const reco::GenParticle & parton = *jet.genParton();
         jets_.refparton_pt[jets_.nref] = parton.pt();
         jets_.refparton_flavor[jets_.nref] = parton.pdgId();
-      }
-      else {
-        jets_.refparton_pt[jets_.nref] = -999;
-        jets_.refparton_flavor[jets_.nref] = -999;
-      }
-
+        }
+        else {
+          jets_.refparton_pt[jets_.nref] = -999;
+          jets_.refparton_flavor[jets_.nref] = -999;
+        }
+      // if(genjet->pt() < 5 ) std::cout << genjet->pt() << " gen jet pt" << std::endl;
       jets_.refpt[jets_.nref] = genjet->pt();
       jets_.refeta[jets_.nref] = genjet->eta();
       jets_.refphi[jets_.nref] = genjet->phi();
@@ -685,6 +687,7 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
     // std::cout << "PFE shift below" << std::endl;
     for(auto it = daughters.begin(); it!=daughters.end(); ++it){
       // std::cout << (**it).mass() << std::endl;
+
       //if we want only charged constituents and the daughter charge is 0, skip it
       //hide all this jetID stuff in a function (hooraaay?)
       if(doHiJetID_){
@@ -819,6 +822,11 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
       //   std::cout << "Eta phi for weird neutrals: " << mypart.pseudorapidity() << " " << mypart.phi() << " with ID " << (**it).pdgId() << std::endl;
       // }
 
+      //if corrected pt of particle is below the cut, skip it 
+      if(mypart.perp() < minConstituentPt_){
+        continue;
+      }
+
       particles.push_back(mypart);
       // std::cout << " Distance between jet and particle " << mypart.delta_R(myjet) << std::endl;
       // if(mypart.delta_R(myjet) > rParam ) std::cout << "Larger than jet radius!" << std::endl;
@@ -906,11 +914,13 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringRec(double groom_type, double 
       throw(123);
     }
 
-    fastjet::PseudoJet sumParticles;
-    sumParticles.reset(0,0,0,0);
-    for(size_t i{0}; i < particles.size(); ++i){
-      sumParticles = sumParticles + particles.at(i);
-    }
+    // fastjet::PseudoJet sumParticles;
+    // sumParticles.reset(0,0,0,0);
+    // for(size_t i{0}; i < particles.size(); ++i){
+    //   Double_t const_jet_dist = particles.at(i).delta_R(jet);
+    //   if(const_jet_dist < 0.4) std::cout << "Particle outside radius cone: " << const_jet_dist << std::endl;
+    //   sumParticles = sumParticles + particles.at(i);
+    // }
     // std::cout << "Modified jet pT vs constituent pT " << map_Corrected_jtpt - sumParticles.pt() << " = " << map_Corrected_jtpt << " - " << sumParticles.pt() << " for jet of eta phi " << jet.eta() << " " << jet.phi() << std::endl;
     // std::cout << "Clustering " << particles.size() << " number of reco particles" << std::endl;
     fastjet::ClusterSequence csiter(particles, jet_def);
@@ -1045,6 +1055,10 @@ void HiInclusiveJetAnalyzer::IterativeDeclusteringGen(double groom_type, double 
     for(auto it = daughters.begin(); it != daughters.end(); ++it){
       //if we want only charged constituents and the daughter charge is 0, skip it
       if( doChargedConstOnly_ && (**it).charge() == 0 ) continue;
+      //if corrected pt of particle is below the cut, skip it 
+      if((**it).pt() < minConstituentPt_){
+        continue;
+      }
       particles.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
       mypart.reset((**it).px(), (**it).py(), (**it).pz(), (**it).energy());
       double frac_dR = mypart.delta_R(myjet)/rParam;

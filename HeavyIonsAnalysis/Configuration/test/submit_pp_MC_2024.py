@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from CRABClient.UserUtilities import config
 
-jobTag = "2024PP_embedded_pythia_unmatchedRecoJets"
+jobTag = "2024_pp_pythia_2GeV_constit_cut"
 config = config()
 config.section_('General')
 config.General.transferOutputs = True
@@ -18,7 +18,10 @@ config.JobType.pluginName = 'Analysis'
 config.JobType.maxMemoryMB = 3000
 
 config.section_('Data')
+# default sample for pp
 config.Data.inputDataset = '/QCD_pThat-15to1200_TuneCP5_5p36TeV_pythia8/RunIIIpp5p36Winter24MiniAOD-141X_mcRun3_2024_realistic_ppRef5TeV_v7-v2/MINIAODSIM'
+# herwig7 sample
+# config.Data.inputDataset = '/QCD_Pt-15to1200_TuneCH3_Flat_5p36TeV_herwig7/RunIIIpp5p36Winter24MiniAOD-141X_mcRun3_2024_realistic_ppRef5TeV_v7-v2/MINIAODSIM'
 config.Data.publication = False
 # config.Data.runRange = '306773-306793'
 # config.Data.totalUnits = -1

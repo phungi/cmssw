@@ -3,8 +3,8 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_pp_on_PbPb_2024_cff import Run3_pp_on_PbPb_2024
-process = cms.Process('HiForest', Run3_pp_on_PbPb_2024)
+from Configuration.Eras.Era_Run3_2025_OXY_cff import Run3_2025_OXY
+process = cms.Process('HiForest', Run3_2025_OXY)
 
 ###############################################################################
 
@@ -33,7 +33,7 @@ process.source = cms.Source("PoolSource",
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(1000)
+    input = cms.untracked.int32(2000)
     )
 
 ###############################################################################
@@ -47,7 +47,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '141X_dataRun3_Prompt_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '150X_mcRun3_2025_forOO_realistic_v9', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 ## --> only use this starting from 388000
@@ -76,7 +76,7 @@ process.centralityBin.centralityVariable = cms.string("HFtowers")
 
 # root output
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("HiForestMiniAOD.root"))
+    fileName = cms.string("L1_object_data.root"))
 
 # # edm output for debugging purposes
 # process.output = cms.OutputModule(
@@ -154,7 +154,7 @@ process.forest = cms.Path(
     process.hiEvtAnalyzer +
     process.hltanalysis
     # process.hltobject +
-    # process.l1object +
+    # process.l1object
     # process.trackSequencePbPb +
     # process.particleFlowAnalyser +
     # process.ggHiNtuplizer +
@@ -265,8 +265,7 @@ process.hltfilter = hltHighLevel.clone(
        #"HLT_HIZeroBias_v4",
        # "HLT_MinimumBiasHF_OR_BptxAND_v*"
        "HLT_MinimumBiasHF_OR_BptxAND_v*",
-       "HLT_OxyL1SingleJet*",
-       "HLT_OxyL1SingleEG*"
+       "HLT_OxyL1SingleJet*"
        # "HLT_HIMinimumBias_v*",
    ]
 )
