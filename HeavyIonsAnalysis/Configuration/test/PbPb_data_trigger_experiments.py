@@ -133,9 +133,9 @@ process.zdcanalyzer.calZDCDigi = True
 ################################
 #Rho information
 # process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
-process.load("RhoAnalyser.RhoAnalysis.RhoAnalysis_cff")
-process.load("RhoAnalyser.RhoAnalysis.RandomConeAnalysis_cff")
-process.load("RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi")
+# process.load("RhoAnalyser.RhoAnalysis.RhoAnalysis_cff")
+# process.load("RhoAnalyser.RhoAnalysis.RandomConeAnalysis_cff")
+# process.load("RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi")
 ###############################################################################
 # main forest sequence
 process.forest = cms.Path(
@@ -219,7 +219,7 @@ if addR2Jets or addR2JetsRetry or addR3Jets or addR3FlowJets or addR4Jets or add
         process.akFlowPuCs4PFJetAnalyzer.jetName = 'akCs4PFFlow'
         process.forest += process.extraFlowJetsData * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
 
-process.forest += process.hiFJRhoFlowModulationProducer * process.rhoAnalysis * process.randomConeAnalysisR4 * process.randomConeAnalysisR2
+# process.forest += process.hiFJRhoFlowModulationProducer * process.rhoAnalysis * process.randomConeAnalysisR4 * process.randomConeAnalysisR2
 
 # if addCandidateTagging:
 #     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
